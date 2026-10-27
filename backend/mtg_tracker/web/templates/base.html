@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}MTG Tracker{% endblock %} | Class project</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+  </head>
+  <body>
+    <header>
+      <strong>MTG Tracker</strong>
+      <p>Tournament and metagame analytics</p>
+      <nav aria-label="Main navigation">
+        <a href="/">Dashboard</a>
+        <a href="/decks">Browse decks</a>
+        <a href="/tournaments">Tournaments &amp; statistics</a>
+      </nav>
+    </header>
+    <main id="main-content">
+      <p class="notice">Project skeleton: data and features have not been implemented.</p>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
