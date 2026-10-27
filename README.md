@@ -13,20 +13,33 @@ and metagame statistics. This branch contains the project skeleton only.
 ## Get started
 
 Install Python 3.12+ and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+Clone the repository and check out the branch containing this skeleton
+(`chore/project-skeleton`, or `main` after it is merged). The branch must be pushed
+to GitHub before teammates can fetch it.
+
 Run these commands from the repository root:
 
 ```powershell
 uv sync --locked --extra dev
 Copy-Item .env.example .env
-uv run uvicorn mtg_tracker.main:app --reload --app-dir backend
+uv run python -m uvicorn mtg_tracker.main:app --app-dir backend
 ```
 
 On macOS/Linux, use `cp .env.example .env` for the copy step.
+
+Keep the example `.env` values as they are for now. No PostgreSQL installation,
+Docker, database account, or real database credentials are needed to run the
+skeleton. The example username/password are reserved for the optional local
+database setup below.
 
 Open <http://127.0.0.1:8000> for the screen placeholders and
 <http://127.0.0.1:8000/docs> for API documentation. The shell and health endpoint
 run without a database connection. `/api/health` reports application liveness only.
 Feature API endpoints deliberately return HTTP 501 until implemented.
+
+Leave the terminal running while using the site. Press Ctrl+C to stop it, then
+run the startup command again after editing Python files. Automatic restart via
+`--reload` is optional; the default above uses the startup mode verified locally.
 
 ## Database setup (when needed)
 
