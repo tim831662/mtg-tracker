@@ -1,19 +1,24 @@
 CREATE TABLE Player (
     pk_player UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(64) NOT NULL,
+    name_real VARCHAR(64) NOT NULL,
     username VARCHAR(32) UNIQUE
 );
+CREATE INDEX idx_player__upper__username ON Player (UPPER(username) ASC);
+CREATE UNIQUE INDEX idx_player__upper__name_real ON
+    Player(UPPER(name_real) ASC);
 
 CREATE TABLE Deck (
     pk_deck UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(64)
+    title VARCHAR(64)
 );
+CREATE INDEX idx_deck__upper__name_deck ON Deck (UPPER(title) ASC);
 
 CREATE TABLE Card (
     pk_card UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) UNIQUE NOT NULL,
+    title VARCHAR(255) UNIQUE NOT NULL,
     description TEXT
 );
+CREATE UNIQUE INDEX idx_card__upper__title ON Card(UPPER(title) ASC);
 
 CREATE TABLE Card_In_Deck (
     deck UUID NOT NULL,
@@ -82,7 +87,7 @@ CREATE TABLE Card_Is_Type (
 
 CREATE TABLE Format (
     pk_format UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(16) UNIQUE NOT NULL,
+    name_format VARCHAR(16) UNIQUE NOT NULL,
     minSz SMALLINT NOT NULL DEFAULT 60,
     copyLimit SMALLINT NOT NULL DEFAULT 4,
          -- 0 for unlimited
@@ -90,6 +95,7 @@ CREATE TABLE Format (
     CONSTRAINT chk_format__minSz__positive CHECK (minSz > 0),
     CONSTRAINT chk_format__copyLimit__nonnegative CHECK (copyLimit >= 0)
 );
+CREATE UNIQUE INDEX idx_format__upper__name ON Format(UPPER(name_format) ASC);
 
 CREATE TABLE FormatRestriction (
     format UUID NOT NULL,
@@ -108,14 +114,18 @@ CREATE TABLE FormatRestriction (
 
 CREATE TABLE Tournament (
     pk_tournament UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(126) UNIQUE,
-    location VARCHAR(255),
+    id VARCHAR(126) UNIQUE,
+    loc VARCHAR(255),
     format UUID,
     occurred DATE,
+    description TEXT, -- for further clarity if needed on intention.
 
     CONSTRAINT fk_tournament__format
         FOREIGN KEY (format) REFERENCES Format(pk_format)
 );
+CREATE UNIQUE INDEX idx_tournament__id__upper ON Tournament(UPPER(id) ASC);
+CREATE INDEX idx_tournament__upper_loc ON Tournament(UPPER(loc) ASC);
+CREATE INDEX idx_tournament__occured ON Tournament(occured) DESC);
 
 CREATE TABLE TournamentEntry (
     player UUID NOT NULL,
@@ -139,10 +149,10 @@ CREATE TABLE Tournament_Match (
     round SMALLINT NOT NULL,
     playerA UUID NOT NULL,
     playerB UUID, -- NULL for bye
-    winA SMALLINT DEFAULT 0,
-    winB SMALLINT DEFAULT 0,
-    draws SMALLINT DEFAULT 0,
-    done BOOLEAN DEFAULT FALSE,
+    winA SMALLINT NOT NULL DEFAULT 0,
+    winB SMALLINT NOT NULL DEFAULT 0,
+    draws SMALLINT NOT NULL DEFAULT 0,
+    done BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT fk_tournament_match__tournament
         FOREIGN KEY (tournament) REFERENCES Tournament(pk_tournament),
