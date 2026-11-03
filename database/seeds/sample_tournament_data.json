@@ -1,0 +1,366 @@
+{
+  "tournaments": [
+    {
+      "id": "grand_prix_2024_01",
+      "name": "Grand Prix City 2024 - Season Opener",
+      "date": "2024-03-15",
+      "format": "Pioneer",
+      "location": "City Convention Center, USA",
+      "num_rounds": 9,
+      "num_players": 256,
+      "source_url": "https://example.com/tournaments/gp-city-2024-01"
+    },
+    {
+      "id": "pro_tour_2024_02",
+      "name": "Professional Tour Finals 2024",
+      "date": "2024-04-20",
+      "format": "Standard",
+      "location": "International Arena, Europe",
+      "num_rounds": 15,
+      "num_players": 512,
+      "source_url": "https://example.com/tournaments/pt-2024-02"
+    }
+  ],
+  "players": [
+    {
+      "id": "player_001",
+      "name": "Alice Thompson"
+    },
+    {
+      "id": "player_002",
+      "name": "Bob Martinez"
+    },
+    {
+      "id": "player_003",
+      "name": "Carol Johnson"
+    },
+    {
+      "id": "player_004",
+      "name": "David Lee"
+    },
+    {
+      "id": "player_005",
+      "name": "Emma Wilson"
+    },
+    {
+      "id": "player_006",
+      "name": "Frank Anderson"
+    }
+  ],
+  "cards": [
+    {
+      "id": "card_001",
+      "name": "Lightning Bolt",
+      "mana_cost": "{R}",
+      "card_type": "Instant",
+      "scryfall_id": "d8cb0e4e-eadc-464f-84e5-d902285e7ae5"
+    },
+    {
+      "id": "card_002",
+      "name": "Counterspell",
+      "mana_cost": "{U}{U}",
+      "card_type": "Instant",
+      "scryfall_id": "cee4e4be-3f2a-4e32-8721-6098c74e2792"
+    },
+    {
+      "id": "card_003",
+      "name": "Black Lotus",
+      "mana_cost": "{0}",
+      "card_type": "Artifact",
+      "scryfall_id": "bd8fa327-dd41-4737-8f19-2cf5eb1d12e0"
+    },
+    {
+      "id": "card_004",
+      "name": "Goblin Guide",
+      "mana_cost": "{R}",
+      "card_type": "Creature — Goblin Scout",
+      "scryfall_id": "552b27e2-92de-48879-8b64-a4251e2e3e13"
+    },
+    {
+      "id": "card_005",
+      "name": "Thoughtseize",
+      "mana_cost": "{B}",
+      "card_type": "Sorcery",
+      "scryfall_id": "310a1be6-f937-4405-9995-e7313552d61a"
+    },
+    {
+      "id": "card_006",
+      "name": "Snapcaster Mage",
+      "mana_cost": "{1}{U}",
+      "card_type": "Creature — Human Wizard",
+      "scryfall_id": "8cdf2d3d-7325-403b-92a0-984589fba7e7"
+    },
+    {
+      "id": "card_007",
+      "name": "Tarmogoyf",
+      "mana_cost": "{1}{G}",
+      "card_type": "Creature — Lhurgoyf",
+      "scryfall_id": "42ee769b-afa0-475f-9bcd-3fe9b7b1b7a8"
+    },
+    {
+      "id": "card_008",
+      "name": "Jace, the Mind Sculptor",
+      "mana_cost": "{1}{U}{U}{U}",
+      "card_type": "Planeswalker — Jace",
+      "scryfall_id": "c057dc0d-4017-4e60-9c5e-de33b48f3599"
+    }
+  ],
+  "decks": [
+    {
+      "id": "deck_001",
+      "name": "Izzet Control - Alice's Build",
+      "format": "Pioneer",
+      "archetype": "Control",
+      "cards": [
+        {
+          "card_id": "card_002",
+          "quantity": 4,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_001",
+          "quantity": 3,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_006",
+          "quantity": 2,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_008",
+          "quantity": 1,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_002",
+          "quantity": 2,
+          "zone": "sideboard"
+        }
+      ]
+    },
+    {
+      "id": "deck_002",
+      "name": "Rakdos Midrange - Bob's Build",
+      "format": "Pioneer",
+      "archetype": "Midrange",
+      "cards": [
+        {
+          "card_id": "card_001",
+          "quantity": 4,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_005",
+          "quantity": 3,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_004",
+          "quantity": 2,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_005",
+          "quantity": 1,
+          "zone": "sideboard"
+        }
+      ]
+    },
+    {
+      "id": "deck_003",
+      "name": "Golgari Stompy - Carol's Build",
+      "format": "Pioneer",
+      "archetype": "Aggro",
+      "cards": [
+        {
+          "card_id": "card_007",
+          "quantity": 4,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_004",
+          "quantity": 3,
+          "zone": "main"
+        }
+      ]
+    },
+    {
+      "id": "deck_004",
+      "name": "Azorius Control - David's Build",
+      "format": "Standard",
+      "archetype": "Control",
+      "cards": [
+        {
+          "card_id": "card_002",
+          "quantity": 4,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_006",
+          "quantity": 3,
+          "zone": "main"
+        }
+      ]
+    },
+    {
+      "id": "deck_005",
+      "name": "Mono Red Aggro - Emma's Build",
+      "format": "Standard",
+      "archetype": "Aggro",
+      "cards": [
+        {
+          "card_id": "card_001",
+          "quantity": 4,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_004",
+          "quantity": 4,
+          "zone": "main"
+        }
+      ]
+    },
+    {
+      "id": "deck_006",
+      "name": "Dimir Mill - Frank's Build",
+      "format": "Standard",
+      "archetype": "Mill",
+      "cards": [
+        {
+          "card_id": "card_002",
+          "quantity": 3,
+          "zone": "main"
+        },
+        {
+          "card_id": "card_006",
+          "quantity": 2,
+          "zone": "main"
+        }
+      ]
+    }
+  ],
+  "tournament_entries": [
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "player_id": "player_001",
+      "deck_id": "deck_001",
+      "seed": 1,
+      "final_placement": 3
+    },
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "player_id": "player_002",
+      "deck_id": "deck_002",
+      "seed": 2,
+      "final_placement": 12
+    },
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "player_id": "player_003",
+      "deck_id": "deck_003",
+      "seed": 5,
+      "final_placement": 8
+    },
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "player_id": "player_004",
+      "deck_id": "deck_001",
+      "seed": 8,
+      "final_placement": 25
+    },
+    {
+      "tournament_id": "pro_tour_2024_02",
+      "player_id": "player_002",
+      "deck_id": "deck_004",
+      "seed": 3,
+      "final_placement": 15
+    },
+    {
+      "tournament_id": "pro_tour_2024_02",
+      "player_id": "player_005",
+      "deck_id": "deck_005",
+      "seed": 6,
+      "final_placement": 7
+    },
+    {
+      "tournament_id": "pro_tour_2024_02",
+      "player_id": "player_006",
+      "deck_id": "deck_006",
+      "seed": 10,
+      "final_placement": 20
+    }
+  ],
+  "matches": [
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "round_num": 1,
+      "player_one_tournament_entry_seed": 1,
+      "player_two_tournament_entry_seed": 32,
+      "winner_seed": 1,
+      "player_one_wins": 2,
+      "player_two_wins": 0,
+      "draws": 0
+    },
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "round_num": 1,
+      "player_one_tournament_entry_seed": 2,
+      "player_two_tournament_entry_seed": 31,
+      "winner_seed": 2,
+      "player_one_wins": 2,
+      "player_two_wins": 1,
+      "draws": 0
+    },
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "round_num": 1,
+      "player_one_tournament_entry_seed": 5,
+      "player_two_tournament_entry_seed": 28,
+      "winner_seed": 5,
+      "player_one_wins": 2,
+      "player_two_wins": 0,
+      "draws": 0
+    },
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "round_num": 2,
+      "player_one_tournament_entry_seed": 1,
+      "player_two_tournament_entry_seed": 2,
+      "winner_seed": 1,
+      "player_one_wins": 2,
+      "player_two_wins": 1,
+      "draws": 0
+    },
+    {
+      "tournament_id": "grand_prix_2024_01",
+      "round_num": 2,
+      "player_one_tournament_entry_seed": 5,
+      "player_two_tournament_entry_seed": 8,
+      "winner_seed": 5,
+      "player_one_wins": 2,
+      "player_two_wins": 1,
+      "draws": 0
+    },
+    {
+      "tournament_id": "pro_tour_2024_02",
+      "round_num": 1,
+      "player_one_tournament_entry_seed": 3,
+      "player_two_tournament_entry_seed": 62,
+      "winner_seed": 3,
+      "player_one_wins": 2,
+      "player_two_wins": 0,
+      "draws": 0
+    },
+    {
+      "tournament_id": "pro_tour_2024_02",
+      "round_num": 1,
+      "player_one_tournament_entry_seed": 6,
+      "player_two_tournament_entry_seed": 59,
+      "winner_seed": 6,
+      "player_one_wins": 2,
+      "player_two_wins": 1,
+      "draws": 0
+    }
+  ]
+}
