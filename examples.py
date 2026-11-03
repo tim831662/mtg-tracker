@@ -9,6 +9,7 @@ for working with MTG tournament data.
 # EXAMPLE 1: Import tournament data from JSON
 # ============================================================================
 
+
 def example_import_tournaments():
     """Import tournament data from a JSON file."""
     from pathlib import Path
@@ -32,6 +33,7 @@ def example_import_tournaments():
 # EXAMPLE 2: Query tournaments after import
 # ============================================================================
 
+
 def example_query_tournaments():
     """Query imported tournament data."""
     from mtg_tracker.db.session import get_session_factory
@@ -54,6 +56,7 @@ def example_query_tournaments():
 # ============================================================================
 # EXAMPLE 3: Get deck information
 # ============================================================================
+
 
 def example_get_deck_info():
     """Query deck information."""
@@ -81,9 +84,7 @@ def example_get_deck_info():
         print(f"  Sideboard: {sideboard_size} cards")
 
         # Check legality
-        is_legal, errors = DeckService.validate_deck_legality(
-            session, deck.id, deck.format
-        )
+        is_legal, errors = DeckService.validate_deck_legality(session, deck.id, deck.format)
         if is_legal:
             print(f"  ✓ Legal for {deck.format}")
         else:
@@ -94,14 +95,13 @@ def example_get_deck_info():
         # Show cards
         print("\n  Cards in deck:")
         for card_entry in deck.cards:
-            print(
-                f"    {card_entry.quantity}x {card_entry.card.name} ({card_entry.zone})"
-            )
+            print(f"    {card_entry.quantity}x {card_entry.card.name} ({card_entry.zone})")
 
 
 # ============================================================================
 # EXAMPLE 4: Query tournament standings
 # ============================================================================
+
 
 def example_tournament_standings():
     """Get tournament standings."""
@@ -133,6 +133,7 @@ def example_tournament_standings():
 # EXAMPLE 5: Create new data programmatically
 # ============================================================================
 
+
 def example_create_tournament():
     """Create a new tournament programmatically."""
     from datetime import datetime
@@ -162,6 +163,7 @@ def example_create_tournament():
 # EXAMPLE 6: Analyze deck archetypes
 # ============================================================================
 
+
 def example_archetype_analysis():
     """Analyze archetype distribution in tournaments."""
     from mtg_tracker.db.session import get_session_factory
@@ -187,6 +189,7 @@ def example_archetype_analysis():
 # ============================================================================
 # EXAMPLE 7: Export deck data
 # ============================================================================
+
 
 def example_export_deck():
     """Export a deck to JSON format."""
@@ -232,6 +235,7 @@ def example_export_deck():
 # EXAMPLE 8: Find duplicate cards across decks
 # ============================================================================
 
+
 def example_find_card_usage():
     """Find which decks use specific cards."""
     from mtg_tracker.db.session import get_session_factory
@@ -248,15 +252,13 @@ def example_find_card_usage():
             deck_count = len(card.deck_cards)
             if deck_count > 0:
                 total_copies = sum(ce.quantity for ce in card.deck_cards)
-                print(
-                    f"  {card.name}: "
-                    f"in {deck_count} decks, {total_copies} total copies"
-                )
+                print(f"  {card.name}: in {deck_count} decks, {total_copies} total copies")
 
 
 # ============================================================================
 # EXAMPLE 9: Calculate format-specific statistics
 # ============================================================================
+
 
 def example_format_statistics():
     """Calculate statistics for a format."""
@@ -293,6 +295,7 @@ def example_format_statistics():
 # EXAMPLE 10: Migrate data to another database
 # ============================================================================
 
+
 def example_backup_data():
     """Export all tournament data to JSON backup."""
     import json
@@ -316,9 +319,7 @@ def example_backup_data():
                 }
                 for t in session.query(Tournament).all()
             ],
-            "players": [
-                {"id": p.id, "name": p.name} for p in session.query(Player).all()
-            ],
+            "players": [{"id": p.id, "name": p.name} for p in session.query(Player).all()],
             "cards": [
                 {
                     "id": c.id,
