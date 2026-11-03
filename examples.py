@@ -12,6 +12,7 @@ for working with MTG tournament data.
 def example_import_tournaments():
     """Import tournament data from a JSON file."""
     from pathlib import Path
+
     from mtg_tracker.db.session import get_session_factory
     from mtg_tracker.importers.tournaments import TournamentImporter
 
@@ -57,8 +58,8 @@ def example_query_tournaments():
 def example_get_deck_info():
     """Query deck information."""
     from mtg_tracker.db.session import get_session_factory
-    from mtg_tracker.services import DeckService
     from mtg_tracker.models import Deck
+    from mtg_tracker.services import DeckService
 
     session_factory = get_session_factory()
 
@@ -86,12 +87,12 @@ def example_get_deck_info():
         if is_legal:
             print(f"  ✓ Legal for {deck.format}")
         else:
-            print(f"  ✗ Issues found:")
+            print("  ✗ Issues found:")
             for error in errors:
                 print(f"    - {error}")
 
         # Show cards
-        print(f"\n  Cards in deck:")
+        print("\n  Cards in deck:")
         for card_entry in deck.cards:
             print(
                 f"    {card_entry.quantity}x {card_entry.card.name} ({card_entry.zone})"
@@ -117,7 +118,7 @@ def example_tournament_standings():
             return
 
         print(f"\nTournament: {tournament.name}")
-        print(f"Standings:")
+        print("Standings:")
 
         # Sort entries by placement
         entries = sorted(tournament.entries, key=lambda e: e.final_placement or 999)
@@ -135,6 +136,7 @@ def example_tournament_standings():
 def example_create_tournament():
     """Create a new tournament programmatically."""
     from datetime import datetime
+
     from mtg_tracker.db.session import get_session_factory
     from mtg_tracker.models import Tournament
 
@@ -163,8 +165,8 @@ def example_create_tournament():
 def example_archetype_analysis():
     """Analyze archetype distribution in tournaments."""
     from mtg_tracker.db.session import get_session_factory
+    from mtg_tracker.models import Deck, TournamentEntry
     from sqlalchemy import func
-    from mtg_tracker.models import TournamentEntry, Deck
 
     session_factory = get_session_factory()
 
@@ -189,6 +191,7 @@ def example_archetype_analysis():
 def example_export_deck():
     """Export a deck to JSON format."""
     import json
+
     from mtg_tracker.db.session import get_session_factory
     from mtg_tracker.models import Deck
 
@@ -221,7 +224,7 @@ def example_export_deck():
             else:
                 deck_data["sideboard"].append(card_info)
 
-        print(f"\nExported deck:")
+        print("\nExported deck:")
         print(json.dumps(deck_data, indent=2))
 
 
@@ -258,8 +261,8 @@ def example_find_card_usage():
 def example_format_statistics():
     """Calculate statistics for a format."""
     from mtg_tracker.db.session import get_session_factory
-    from sqlalchemy import func
     from mtg_tracker.models import Tournament, TournamentEntry
+    from sqlalchemy import func
 
     session_factory = get_session_factory()
 
@@ -294,8 +297,9 @@ def example_backup_data():
     """Export all tournament data to JSON backup."""
     import json
     from datetime import datetime
+
     from mtg_tracker.db.session import get_session_factory
-    from mtg_tracker.models import Tournament, Player, Card, Deck
+    from mtg_tracker.models import Card, Deck, Player, Tournament
 
     session_factory = get_session_factory()
 

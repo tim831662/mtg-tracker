@@ -1,7 +1,6 @@
 """Tournament data validation and business logic services."""
 
 import logging
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -14,17 +13,17 @@ class TournamentService:
     """Business logic for tournament operations."""
 
     @staticmethod
-    def get_tournament_by_id(session: Session, tournament_id: int) -> Optional[Tournament]:
+    def get_tournament_by_id(session: Session, tournament_id: int) -> Tournament | None:
         """Retrieve a tournament by ID."""
         return session.query(Tournament).filter_by(id=tournament_id).first()
 
     @staticmethod
-    def get_tournament_by_source_id(session: Session, source_id: str) -> Optional[Tournament]:
+    def get_tournament_by_source_id(session: Session, source_id: str) -> Tournament | None:
         """Retrieve a tournament by external source ID (for deduplication)."""
         return session.query(Tournament).filter_by(source_id=source_id).first()
 
     @staticmethod
-    def list_tournaments(session: Session, format_filter: Optional[str] = None) -> list[Tournament]:
+    def list_tournaments(session: Session, format_filter: str | None = None) -> list[Tournament]:
         """List tournaments, optionally filtered by format."""
         query = session.query(Tournament).order_by(Tournament.date.desc())
         if format_filter:
@@ -36,12 +35,12 @@ class DeckService:
     """Business logic for deck operations."""
 
     @staticmethod
-    def get_deck_by_id(session: Session, deck_id: int) -> Optional[Deck]:
+    def get_deck_by_id(session: Session, deck_id: int) -> Deck | None:
         """Retrieve a deck by ID."""
         return session.query(Deck).filter_by(id=deck_id).first()
 
     @staticmethod
-    def get_deck_by_source_id(session: Session, source_id: str) -> Optional[Deck]:
+    def get_deck_by_source_id(session: Session, source_id: str) -> Deck | None:
         """Retrieve a deck by external source ID."""
         return session.query(Deck).filter_by(source_id=source_id).first()
 

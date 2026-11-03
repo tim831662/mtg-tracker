@@ -6,9 +6,8 @@ Create Date: 2026-11-03 14:36:00.000000
 
 """
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "001_initial_schema"
@@ -104,12 +103,16 @@ def upgrade() -> None:
         sa.Column("final_placement", sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint("id", name="pk_tournament_entries"),
         sa.ForeignKeyConstraint(
-            ["tournament_id"], ["tournaments.id"], name="fk_tournament_entries_tournament_id_tournaments"
+            ["tournament_id"],
+            ["tournaments.id"],
+            name="fk_tournament_entries_tournament_id_tournaments",
         ),
         sa.ForeignKeyConstraint(
             ["player_id"], ["players.id"], name="fk_tournament_entries_player_id_players"
         ),
-        sa.ForeignKeyConstraint(["deck_id"], ["decks.id"], name="fk_tournament_entries_deck_id_decks"),
+        sa.ForeignKeyConstraint(
+            ["deck_id"], ["decks.id"], name="fk_tournament_entries_deck_id_decks"
+        ),
         sa.UniqueConstraint("tournament_id", "player_id", name="uq_tournament_player"),
     )
     op.create_index("ix_tournament_entries_tournament_id", "tournament_entries", ["tournament_id"])
@@ -129,7 +132,9 @@ def upgrade() -> None:
         sa.Column("draws", sa.Integer(), nullable=False, server_default="0"),
         sa.PrimaryKeyConstraint("id", name="pk_tournament_matches"),
         sa.ForeignKeyConstraint(
-            ["tournament_id"], ["tournaments.id"], name="fk_tournament_matches_tournament_id_tournaments"
+            ["tournament_id"],
+            ["tournaments.id"],
+            name="fk_tournament_matches_tournament_id_tournaments",
         ),
         sa.ForeignKeyConstraint(
             ["player_one_id"],
