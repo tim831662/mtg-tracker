@@ -1,9 +1,8 @@
 """Tournament, player, deck, and match models."""
 
 from datetime import datetime
-from typing import Optional
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mtg_tracker.db.base import Base
@@ -18,10 +17,10 @@ class Tournament(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     format: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., "Standard", "Pioneer"
-    location: Mapped[Optional[str]] = mapped_column(String(255))
+    location: Mapped[str | None] = mapped_column(String(255))
     num_rounds: Mapped[int] = mapped_column(Integer, default=8)
-    source_url: Mapped[Optional[str]] = mapped_column(Text)
-    source_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    source_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
     imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     entries: Mapped[list["TournamentEntry"]] = relationship(
@@ -42,7 +41,7 @@ class Player(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    source_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
+    source_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
     imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     entries: Mapped[list["TournamentEntry"]] = relationship(
@@ -61,8 +60,8 @@ class Deck(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255))
     format: Mapped[str] = mapped_column(String(50), nullable=False)
-    archetype: Mapped[Optional[str]] = mapped_column(String(255))
-    source_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
+    archetype: Mapped[str | None] = mapped_column(String(255))
+    source_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
     imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     entries: Mapped[list["TournamentEntry"]] = relationship(
@@ -83,9 +82,9 @@ class Card(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    mana_cost: Mapped[Optional[str]] = mapped_column(String(50))
-    card_type: Mapped[Optional[str]] = mapped_column(String(255))
-    scryfall_id: Mapped[Optional[str]] = mapped_column(String(36), unique=True, index=True)
+    mana_cost: Mapped[str | None] = mapped_column(String(50))
+    card_type: Mapped[str | None] = mapped_column(String(255))
+    scryfall_id: Mapped[str | None] = mapped_column(String(36), unique=True, index=True)
     imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     deck_cards: Mapped[list["CardInDeck"]] = relationship(
@@ -127,8 +126,8 @@ class TournamentEntry(Base):
     )
     player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False, index=True)
     deck_id: Mapped[int] = mapped_column(ForeignKey("decks.id"), nullable=False, index=True)
-    seed: Mapped[Optional[int]] = mapped_column(Integer)
-    final_placement: Mapped[Optional[int]] = mapped_column(Integer)
+    seed: Mapped[int | None] = mapped_column(Integer)
+    final_placement: Mapped[int | None] = mapped_column(Integer)
 
     tournament: Mapped[Tournament] = relationship("Tournament", back_populates="entries")
     player: Mapped[Player] = relationship("Player", back_populates="entries")
@@ -163,10 +162,10 @@ class TournamentMatch(Base):
     player_one_id: Mapped[int] = mapped_column(
         ForeignKey("tournament_entries.id"), nullable=False, index=True
     )
-    player_two_id: Mapped[Optional[int]] = mapped_column(
+    player_two_id: Mapped[int | None] = mapped_column(
         ForeignKey("tournament_entries.id"), index=True
     )
-    winner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("tournament_entries.id"))
+    winner_id: Mapped[int | None] = mapped_column(ForeignKey("tournament_entries.id"))
     # For draws or byes: None winner means draw or bye
     player_one_wins: Mapped[int] = mapped_column(Integer, default=0)
     player_two_wins: Mapped[int] = mapped_column(Integer, default=0)
@@ -176,7 +175,7 @@ class TournamentMatch(Base):
     player_one: Mapped[TournamentEntry] = relationship(
         "TournamentEntry", foreign_keys=[player_one_id], back_populates="matches_as_player_one"
     )
-    player_two: Mapped[Optional[TournamentEntry]] = relationship(
+    player_two: Mapped[TournamentEntry | None] = relationship(
         "TournamentEntry", foreign_keys=[player_two_id], back_populates="matches_as_player_two"
     )
 

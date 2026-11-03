@@ -45,8 +45,9 @@ class TournamentImporter:
             )
 
             if existing:
+                source_id = tournament_data.get("id")
                 logger.info(
-                    f"Tournament {tournament_data['name']} already exists (source_id: {tournament_data.get('id')})"
+                    f"Tournament {tournament_data['name']} already exists (source_id: {source_id})"
                 )
                 self.tournament_map[tournament_data["id"]] = existing
                 continue
@@ -72,8 +73,9 @@ class TournamentImporter:
             existing = self.session.query(Player).filter_by(source_id=player_data.get("id")).first()
 
             if existing:
+                source_id = player_data.get("id")
                 logger.info(
-                    f"Player {player_data['name']} already exists (source_id: {player_data.get('id')})"
+                    f"Player {player_data['name']} already exists (source_id: {source_id})"
                 )
                 self.player_map[player_data["id"]] = existing
                 continue
@@ -100,8 +102,9 @@ class TournamentImporter:
                 )
 
             if existing:
+                scryfall_id = card_data.get("scryfall_id")
                 logger.info(
-                    f"Card {card_data['name']} already exists (scryfall_id: {card_data.get('scryfall_id')})"
+                    f"Card {card_data['name']} already exists (scryfall_id: {scryfall_id})"
                 )
                 self.card_map[card_data["id"]] = existing
                 continue
