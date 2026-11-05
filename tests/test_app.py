@@ -32,16 +32,8 @@ def test_static_styles_and_api_documentation(client):
     assert "/api/health" in client.get("/openapi.json").json()["paths"]
 
 
-@pytest.mark.parametrize(
-    "path",
-    [
-        "/api/decks",
-        "/api/decks/00000000-0000-0000-0000-000000000001",
-        "/api/tournaments",
-        "/api/analytics",
-    ],
-)
-def test_feature_routes_are_explicit_stubs(client, path):
-    response = client.get(path)
-    assert response.status_code == 501
-    assert "not implemented" in response.json()["detail"]
+def test_api_documentation_lists_feature_routes(client):
+    paths = client.get("/openapi.json").json()["paths"]
+    assert "/api/decks" in paths
+    assert "/api/tournaments" in paths
+    assert "/api/analytics/matchups" in paths

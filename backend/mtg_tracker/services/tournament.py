@@ -1,10 +1,13 @@
-"""Tournament data validation and business logic services."""
+"""Tournament and deck business logic; SQL lives in the repositories layer."""
 
 import logging
 
 from sqlalchemy.orm import Session
 
 from mtg_tracker.models import Deck, Tournament
+from mtg_tracker.repositories.decks import DeckRepository
+from mtg_tracker.repositories.tournaments import TournamentRepository
+from mtg_tracker.schemas.tournaments import TournamentSummary
 
 logger = logging.getLogger(__name__)
 
@@ -15,20 +18,46 @@ class TournamentService:
     @staticmethod
     def get_tournament_by_id(session: Session, tournament_id: int) -> Tournament | None:
         """Retrieve a tournament by ID."""
-        return session.query(Tournament).filter_by(id=tournament_id).first()
+        return TournamentRepository.get_by_id(session, tournament_id)
 
     @staticmethod
     def get_tournament_by_source_id(session: Session, source_id: str) -> Tournament | None:
         """Retrieve a tournament by external source ID (for deduplication)."""
-        return session.query(Tournament).filter_by(source_id=source_id).first()
+        return TournamentRepository.get_by_source_id(session, source_id)
 
     @staticmethod
-    def list_tournaments(session: Session, format_filter: str | None = None) -> list[Tournament]:
-        """List tournaments, optionally filtered by format."""
-        query = session.query(Tournament).order_by(Tournament.date.desc())
-        if format_filter:
-            query = query.filter_by(format=format_filter)
-        return query.all()
+    def list_tournaments(
+        session: Session,
+        format_filter: str | None = None,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[Tournament]:
+        """List tournaments, newest first, optionally filtered by format."""
+        return TournamentRepository.list_all(session, format_filter, limit=limit, offset=offset)
+
+    @staticmethod
+    def count_tournaments(session: Session, format_filter: str | None = None) -> int:
+        """Count tournaments matching the optional format filter."""
+        return TournamentRepository.count(session, format_filter)
+
+    @staticmethod
+    def summarize(tournament: Tournament) -> TournamentSummary:
+        """Build the API summary contract, including the entry count."""
+        return TournamentSummary(
+            id=tournament.id,
+            name=tournament.name,
+            format=tournament.format,
+            date=tournament.date,
+            location=tournament.location,
+            num_rounds=tournament.num_rounds,
+            player_count=len(tournament.entries),
+        )
+
+    @staticmethod
+    def standings(session: Session, tournament_id: int) -> list[dict]:
+        """Return entries ordered by final placement (nulls last)."""
+        return TournamentRepository.standings(session, tournament_id)
 
 
 class DeckService:
@@ -37,12 +66,45 @@ class DeckService:
     @staticmethod
     def get_deck_by_id(session: Session, deck_id: int) -> Deck | None:
         """Retrieve a deck by ID."""
-        return session.query(Deck).filter_by(id=deck_id).first()
+        return DeckRepository.get_by_id(session, deck_id)
 
     @staticmethod
     def get_deck_by_source_id(session: Session, source_id: str) -> Deck | None:
         """Retrieve a deck by external source ID."""
-        return session.query(Deck).filter_by(source_id=source_id).first()
+        return DeckRepository.get_by_source_id(session, source_id)
+
+    @staticmethod
+    def list_decks(
+        session: Session,
+        format_filter: str | None = None,
+        archetype: str | None = None,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[Deck]:
+        """List decks by name, optionally filtered by format and archetype."""
+        return DeckRepository.list_all(
+            session, format_filter, archetype, limit=limit, offset=offset
+        )
+
+    @staticmethod
+    def count_decks(
+        session: Session,
+        format_filter: str | None = None,
+        archetype: str | None = None,
+    ) -> int:
+        """Count decks matching the optional filters."""
+        return DeckRepository.count(session, format_filter, archetype)
+
+    @staticmethod
+    def deck_cards(session: Session, deck_id: int) -> list[dict]:
+        """Return the deck's card slots (name, quantity, zone, mana cost)."""
+        return DeckRepository.cards(session, deck_id)
+
+    @staticmethod
+    def deck_appearances(session: Session, deck_id: int) -> list[dict]:
+        """Return the tournaments a deck appeared in, most recent first."""
+        return DeckRepository.appearances(session, deck_id)
 
     @staticmethod
     def calculate_deck_size(session: Session, deck_id: int) -> int:

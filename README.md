@@ -35,7 +35,19 @@ database setup below.
 Open <http://127.0.0.1:8000> for the screen placeholders and
 <http://127.0.0.1:8000/docs> for API documentation. The shell and health endpoint
 run without a database connection. `/api/health` reports application liveness only.
-Feature API endpoints deliberately return HTTP 501 until implemented.
+Feature endpoints read from PostgreSQL and need a database with the migration
+applied and data imported (see below).
+
+Implemented JSON API endpoints (full contract with example responses in
+[docs/api-contract.md](docs/api-contract.md)):
+
+- `GET /api/decks` and `GET /api/decks/{id}` — browse decks, filter by
+  `format` or `archetype`, paginate; deck detail includes the card list and
+  tournament appearances.
+- `GET /api/tournaments` and `GET /api/tournaments/{id}` — browse
+  tournaments, filter by `format`; detail includes final standings.
+- `GET /api/analytics/matchups` — matchup win rates by archetype pair,
+  filterable by `format` or `tournament_id`.
 
 Leave the terminal running while using the site. Press Ctrl+C to stop it, then
 run the startup command again after editing Python files. Automatic restart via
@@ -54,35 +66,38 @@ Alternatively, set `DATABASE_URL` in `.env` to a team PostgreSQL database using
 the `postgresql+psycopg://` URL scheme. Add the provider's required SSL options.
 Keep real credentials out of Git.
 
-No tables or seed data are created yet. After implementing the models, create
-and review the first migration before applying it to your own database:
+Apply the existing migration and load the sample tournament data so the API
+endpoints return real records:
 
 ```powershell
-uv run alembic revision --autogenerate -m "create initial schema"
 uv run alembic upgrade head
+uv run python -m mtg_tracker.importers.tournaments database/seeds/sample_tournament_data.json
 ```
 
-Coordinate migrations before applying them to a shared class database.
+Note that the sample importer does not load match results yet (the seed file's
+matches reference entries that are not present), so matchup analytics stay
+empty until real match data is imported. Coordinate migrations before applying
+them to a shared class database.
 
 ## Structure
 
 ```text
 backend/mtg_tracker/
-  api/             Health route and explicit feature stubs
+  api/             JSON API routes for decks, tournaments, and analytics
   core/            Environment configuration
   db/              SQLAlchemy base and session factory
-  models/          Future relational mappings
-  schemas/         Future request/response schemas
-  repositories/    Future database queries
-  services/        Future validation and analytics logic
+  models/          Relational mappings
+  schemas/         Pydantic request/response contracts (frontend API contract)
+  repositories/    Database queries, including matchup win-rate SQL
+  services/        Validation and analytics logic
   importers/       Separate batch-import entry points
   web/             Page routes, shared templates, and CSS
 database/
-  migrations/      Alembic setup; no initial migration yet
-  queries/         Future analytical SQL
-  seeds/           Future small, synthetic development fixtures
+  migrations/      Alembic setup and the initial schema migration
+  queries/         Reviewed analytical SQL (matchup win rates)
+  seeds/           Small, synthetic development fixtures
 docs/              Scope, architecture, schema decisions, and team workflow
-tests/             Application shell and API contract smoke tests
+tests/             Shell smoke tests and seeded API contract tests
 ```
 
 ## Development
