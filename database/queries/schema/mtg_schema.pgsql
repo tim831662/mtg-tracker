@@ -13,13 +13,6 @@ CREATE TABLE Deck (
 );
 CREATE INDEX idx_deck__upper__name_deck ON Deck (UPPER(title) ASC);
 
-CREATE TABLE Card (
-    pk_card UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT
-);
-CREATE UNIQUE INDEX idx_card__upper__title ON Card(UPPER(title) ASC);
-
 CREATE TABLE Card_In_Deck (
     deck UUID NOT NULL,
     card UUID NOT NULL,
@@ -27,8 +20,10 @@ CREATE TABLE Card_In_Deck (
 
     CONSTRAINT pk_card_in_deck PRIMARY KEY (deck, card),
 
-    CONSTRAINT fk_card_in_deck__deck FOREIGN KEY (deck) REFERENCES Deck(pk_deck),
-    CONSTRAINT fk_card_in_deck__card FOREIGN KEY (card) REFERENCES Card(pk_card),
+    CONSTRAINT fk_card_in_deck__deck
+        FOREIGN KEY (deck) REFERENCES Deck(pk_deck),
+    CONSTRAINT fk_card_in_deck__card
+        FOREIGN KEY (card) REFERENCES Card(pk_card),
 
     CONSTRAINT chk_card_in_deck__amount CHECK (amount > 0)
 );
@@ -47,6 +42,35 @@ INSERT INTO Mana (mana, abbr, name) VALUES
     (5, 'G', 'Green'),
     (6, 'C', 'Colorless')
 ;
+
+CREATE TABLE Card (
+    pk_card UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) UNIQUE NOT NULL,
+    artist VARCHAR(32), -- null for unknown
+
+    /** bit mask for color identities used
+     * This is for restrictions where some rules prohibit using cards with
+     *  certain color identities.
+     */
+    colorIdentity SMALLINT DEFAULT 63,
+    collectorID VARCHAR(20) UNIQUE,
+    power VARCHAR(16),
+    toughness VARCHAR(16),
+    rarity VARCHAR(20),
+    code VARCHAR(10),
+    description TEXT
+);
+CREATE UNIQUE INDEX idx_card__upper__title ON Card (UPPER(title) ASC);
+CREATE INDEX idx_card__artist ON Card (UPPER(artist) ASC);
+CREATE INDEX idx_card__color_identity ON Card (colorIdentity ASC);
+CREATE INDEX idx_card__collector ON Card (UPPER(collectorNum) ASC);
+
+CREATE TABLE Keyword (
+    card UUID NOT NULL,
+    word VARCHAR(20) NOT NULL,
+
+    CONSTRAINT pk_keyword PRIMARY KEY (card, word)
+);
 
 CREATE TABLE Card_Mana_Cost (
     card UUID NOT NULL,
@@ -80,7 +104,8 @@ CREATE TABLE Card_Is_Type (
 
     CONSTRAINT pk_card_is_type PRIMARY KEY (card, type),
 
-    CONSTRAINT fk_card_is_type__card FOREIGN KEY (card) REFERENCES Card(pk_card),
+    CONSTRAINT fk_card_is_type__card
+        FOREIGN KEY (card) REFERENCES Card(pk_card),
     CONSTRAINT fk_card_is_type__type
         FOREIGN KEY (type) REFERENCES CardType(pk_type)
 );
@@ -95,7 +120,7 @@ CREATE TABLE Format (
     CONSTRAINT chk_format__minSz__positive CHECK (minSz > 0),
     CONSTRAINT chk_format__copyLimit__nonnegative CHECK (copyLimit >= 0)
 );
-CREATE UNIQUE INDEX idx_format__upper__name ON Format(UPPER(name_format) ASC);
+CREATE UNIQUE INDEX idx_format__upper__name ON Format (UPPER(name_format) ASC);
 
 CREATE TABLE FormatRestriction (
     format UUID NOT NULL,
@@ -123,9 +148,9 @@ CREATE TABLE Tournament (
     CONSTRAINT fk_tournament__format
         FOREIGN KEY (format) REFERENCES Format(pk_format)
 );
-CREATE UNIQUE INDEX idx_tournament__id__upper ON Tournament(UPPER(id) ASC);
-CREATE INDEX idx_tournament__upper_loc ON Tournament(UPPER(loc) ASC);
-CREATE INDEX idx_tournament__occured ON Tournament(occured) DESC);
+CREATE UNIQUE INDEX idx_tournament__id__upper ON Tournament (UPPER(id) ASC);
+CREATE INDEX idx_tournament__upper_loc ON Tournament (UPPER(loc) ASC);
+CREATE INDEX idx_tournament__occured ON Tournament (occured DESC);
 
 CREATE TABLE TournamentEntry (
     player UUID NOT NULL,
