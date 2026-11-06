@@ -5,7 +5,8 @@ and metagame statistics. This branch adds the initial React frontend implementat
 
 ## React frontend implementation (Task 1)
 
-Install Node.js 22.12+ (Node 22 LTS is suitable). In a second terminal, run:
+Install Node.js 22.12+ (Node 22 LTS is suitable). Start the backend in a first
+terminal using **Get started** below. In a second terminal, run from the repository root:
 
 ```powershell
 cd frontend
@@ -45,19 +46,18 @@ This is an intermediate implementation; production serving/deployment is a later
 ## Get started
 
 Install Python 3.12+ and [uv](https://docs.astral.sh/uv/getting-started/installation/).
-Clone the repository and check out the branch containing this skeleton
-(`chore/project-skeleton`, or `main` after it is merged). The branch must be pushed
-to GitHub before teammates can fetch it.
+Clone the repository and check out `react-frontend-implementation` for this
+frontend work (or `main` after it is merged).
 
 Run these commands from the repository root:
 
 ```powershell
 uv sync --locked --extra dev
-Copy-Item .env.example .env
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 uv run python -m uvicorn mtg_tracker.main:app --app-dir backend
 ```
 
-On macOS/Linux, use `cp .env.example .env` for the copy step.
+On macOS/Linux, use `test -f .env || cp .env.example .env` for the copy step.
 
 Keep the example `.env` values as they are for now. No PostgreSQL installation,
 Docker, database account, or real database credentials are needed to run the
@@ -87,13 +87,20 @@ run the startup command again after editing Python files. Automatic restart via
 
 ## Database setup (when needed)
 
-For a local database, install Docker and run:
+For a local database, install and start Docker Desktop, then run from the repository root:
 
 ```powershell
 docker compose up -d db
+docker compose ps
 ```
 
-The development credentials and port in `.env.example` match `compose.yaml`.
+Wait until `docker compose ps` shows the database as healthy before running
+the migration. The development credentials and port in `.env.example` match `compose.yaml`.
+If Windows reports that port 5432 is unavailable, set `POSTGRES_PORT=55432` in
+`.env` and change the port in `DATABASE_URL` to `55432` too. Then rerun
+`docker compose up -d db` and restart the backend if it is already running.
+Use `127.0.0.1` for the local database host, as in `.env.example`, to match
+Docker's IPv4 binding and avoid `localhost` connection delays on Windows.
 Alternatively, set `DATABASE_URL` in `.env` to a team PostgreSQL database using
 the `postgresql+psycopg://` URL scheme. Add the provider's required SSL options.
 Keep real credentials out of Git.
@@ -142,8 +149,8 @@ uv run python -m mtg_tracker.importers.scryfall --help
 uv run python -m mtg_tracker.importers.tournaments --help
 ```
 
-Import commands expose help only; attempting an import exits with an explicit
-not-implemented message. Nothing is downloaded or written to the database.
+The Scryfall importer is still a placeholder. The tournament importer loads the
+JSON data described above; match-result importing is not implemented yet.
 
 Read [scope](docs/scope.md), [architecture](docs/architecture.md),
 [database design notes](docs/database-design.md), and
