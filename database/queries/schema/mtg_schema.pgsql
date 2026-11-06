@@ -58,18 +58,45 @@ CREATE TABLE Card (
     toughness VARCHAR(16),
     rarity VARCHAR(20),
     code VARCHAR(10),
-    description TEXT
+    mana_production_type SMALLINT NOT NULL DEFAULT 0,
+    mana_production_amount SMALLINT NOT NULL DEFAULT 0,
+    isPromo BOOLEAN DEFAULT FALSE,
+    setCode VARCHAR(8),
+    description TEXT,
+    
+    CONSTRAINT chk_card__mana_production_type
+        CHECK (mana_production_type BETWEEN 0 AND 63),
+    CONSTRAINT chk_card__mana_production_quant__is_nonnegative
+        CHECK (mana_production_amount >= 0)
 );
 CREATE UNIQUE INDEX idx_card__upper__title ON Card (UPPER(title) ASC);
 CREATE INDEX idx_card__artist ON Card (UPPER(artist) ASC);
+CREATE INDEX idx_card__collector ON Card(UPPER(collectorID) ASC);
 CREATE INDEX idx_card__color_identity ON Card (colorIdentity ASC);
+CREATE INDEX idx_card__power ON Card(power DESC);
+CREATE INDEX idx_card__tough ON Card(toughness DESC);
+CREATE INDEX idx_card__rarity ON Card(UPPER(rarity) ASC);
 CREATE INDEX idx_card__collector ON Card (UPPER(collectorNum) ASC);
+CREATE INDEX idx_card__mana_production_type ON Card(mana_production_type ASC);
+CREATE INDEX idx_card__is_promo ON Card(isPromo);
+CREATE INDEX idx_card__setcode ON Card(UPPER(setcode) ASC);
+CREATE INDEX idx_card__code ON Card(UPPER(code) ASC);
 
 CREATE TABLE Keyword (
     card UUID NOT NULL,
     word VARCHAR(20) NOT NULL,
 
-    CONSTRAINT pk_keyword PRIMARY KEY (card, word)
+    CONSTRAINT pk_keyword PRIMARY KEY (card, word),
+    CONSTRAINT fk_keyword__card FOREIGN KEY (card) REFERENCES Card(pk_card)
+);
+CREATE INDEX keyword__word ON Keyword(UPPER(word));
+
+CREATE TABLE Subtype (
+    card UUID NOT NULL,
+    subtype VARCHAR(20) NOT NULL,
+
+    CONSTRAINT pk_subtype PRIMARY KEY (card, subtype),
+    CONSTRAINT fk_subtype__card FOREIGN KEY (card) REFERENCES Card(pk_card)
 );
 
 CREATE TABLE Card_Mana_Cost (
