@@ -1,11 +1,43 @@
 # MTG Tracker
 
 Class project for exploring Magic: The Gathering tournament results, decklists,
-and metagame statistics. This branch contains the project skeleton only.
+and metagame statistics. This branch adds the initial React frontend implementation.
+
+## React frontend implementation (Task 1)
+
+Install Node.js 22.12+ (Node 22 LTS is suitable). In a second terminal, run:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open the Local URL printed by Vite (normally <http://127.0.0.1:5173>).
+Keep the FastAPI backend running on port 8000 using the instructions below;
+Vite forwards `/api` requests to it. No backend CORS changes are needed.
+The backend's port 8000 pages are still the earlier Jinja placeholders.
+
+- Dashboard and Deck Browser follow the planning wireframes with simple CSS.
+- All four screens are navigable. Deck Details and Statistics are placeholders.
+- Dashboard numbers are labeled samples. Deck Browser requests `GET /api/decks`
+  with format filtering and pagination; text search filters the current page.
+- If the API is unreachable or fails, the browser shows labeled sample decks.
+  An empty successful response stays empty. Use **Reload API** after starting
+  the backend/database. The list API does not include player/event/results yet,
+  so those columns show dashes for API records.
+
+To show database records for the meeting, complete the **Database setup** below
+and reload Deck Browser. Seeing sample decks alone does not meet that goal.
+No schema, importer, analytics, or backend behavior is changed by this UI work.
+
+Frontend checks (from `frontend`): `npm test` and `npm run build`.
+This is an intermediate implementation; production serving/deployment is a later step.
 
 ## Stack
 
-- Python 3.12+, FastAPI, and Jinja templates for a small web application
+- React and plain CSS via Vite for the frontend
+- Python 3.12+ and FastAPI for the backend; original Jinja page placeholders retained
 - PostgreSQL, SQLAlchemy, psycopg, and Alembic for persistence and migrations
 - Separate Python importers for Scryfall bulk files and MTG_decklistcache JSON
 - pytest and Ruff for development checks
