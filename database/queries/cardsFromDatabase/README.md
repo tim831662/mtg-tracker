@@ -1,0 +1,1 @@
+cards.csv obtained from MTG repo {TODO provide link}
