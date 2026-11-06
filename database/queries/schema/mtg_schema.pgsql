@@ -76,7 +76,7 @@ CREATE INDEX idx_card__color_identity ON Card (colorIdentity ASC);
 CREATE INDEX idx_card__power ON Card(power DESC);
 CREATE INDEX idx_card__tough ON Card(toughness DESC);
 CREATE INDEX idx_card__rarity ON Card(UPPER(rarity) ASC);
-CREATE INDEX idx_card__collector ON Card (UPPER(collectorNum) ASC);
+CREATE INDEX idx_card__collector ON Card (UPPER(collectorID) ASC);
 CREATE INDEX idx_card__mana_production_type ON Card(mana_production_type ASC);
 CREATE INDEX idx_card__is_promo ON Card(isPromo);
 CREATE INDEX idx_card__setcode ON Card(UPPER(setcode) ASC);
@@ -120,11 +120,6 @@ CREATE TABLE Card_Mana_Cost (
         FOREIGN KEY (card) REFERENCES Card(pk_card)
 );
 
-CREATE TABLE CardType (
-    pk_type SMALLINT PRIMARY KEY,
-    name VARCHAR(32) UNIQUE NOT NULL
-);
-
 CREATE TABLE Card_Is_Type (
     card UUID NOT NULL,
     type SMALLINT NOT NULL,
@@ -132,9 +127,7 @@ CREATE TABLE Card_Is_Type (
     CONSTRAINT pk_card_is_type PRIMARY KEY (card, type),
 
     CONSTRAINT fk_card_is_type__card
-        FOREIGN KEY (card) REFERENCES Card(pk_card),
-    CONSTRAINT fk_card_is_type__type
-        FOREIGN KEY (type) REFERENCES CardType(pk_type)
+        FOREIGN KEY (card) REFERENCES Card(pk_card)
 );
 
 CREATE TABLE Format (
