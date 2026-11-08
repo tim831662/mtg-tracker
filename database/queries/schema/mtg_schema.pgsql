@@ -33,7 +33,6 @@ CREATE TABLE Mana (
     name VARCHAR(9) UNIQUE NOT NULL,
     abbr CHAR(1) UNIQUE NOT NULL -- for {%c} format
 );
-
 INSERT INTO Mana (mana, abbr, name) VALUES
     (1, 'W', 'White'),
     (2, 'U', 'Blue'),
@@ -43,60 +42,85 @@ INSERT INTO Mana (mana, abbr, name) VALUES
     (6, 'C', 'Colorless')
 ;
 
+CREATE TABLE Rarity(
+    pk_rarity SMALLINT PRIMARY KEY,
+    Rarity VARCHAR(20) UNIQUE NOT NULL
+);
+INSERT INTO Rarity VALUES
+    (1, 'common'),
+    (2, 'uncommon'),
+    (3, 'rare'),
+    (4, 'mythic'),
+    (5, 'special'),
+    (6, 'bonus')
+;
+
+CREATE TABLE Artist (
+    pk_artist UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    artist VARCHAR(16) NOT NULL
+);
+CREATE INDEX idx_artist__name ON Artist(UPPER(artist) ASC);
+
 CREATE TABLE Card (
     pk_card UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR(255) UNIQUE NOT NULL,
-    artist VARCHAR(32), -- null for unknown
+    title VARCHAR(255) UNIQUE NOT NULL
 
     /** bit mask for color identities used
      * This is for restrictions where some rules prohibit using cards with
      *  certain color identities.
      */
     colorIdentity SMALLINT DEFAULT 63,
-    collectorID VARCHAR(20) UNIQUE,
     power VARCHAR(16),
     toughness VARCHAR(16),
-    rarity VARCHAR(20),
-    code VARCHAR(10),
+    rarity SMALLINT,
     mana_production_type SMALLINT NOT NULL DEFAULT 0,
     mana_production_amount SMALLINT NOT NULL DEFAULT 0,
     isPromo BOOLEAN DEFAULT FALSE,
     setCode VARCHAR(8),
     description TEXT,
-    
+
     CONSTRAINT chk_card__mana_production_type
         CHECK (mana_production_type BETWEEN 0 AND 63),
     CONSTRAINT chk_card__mana_production_quant__is_nonnegative
         CHECK (mana_production_amount >= 0)
 );
 CREATE UNIQUE INDEX idx_card__upper__title ON Card (UPPER(title) ASC);
-CREATE INDEX idx_card__artist ON Card (UPPER(artist) ASC);
-CREATE INDEX idx_card__collector ON Card(UPPER(collectorID) ASC);
 CREATE INDEX idx_card__color_identity ON Card (colorIdentity ASC);
 CREATE INDEX idx_card__power ON Card(power DESC);
 CREATE INDEX idx_card__tough ON Card(toughness DESC);
-CREATE INDEX idx_card__rarity ON Card(UPPER(rarity) ASC);
-CREATE INDEX idx_card__collector ON Card (UPPER(collectorID) ASC);
+CREATE INDEX idx_card__rarity ON Card(rarity DESC);
 CREATE INDEX idx_card__mana_production_type ON Card(mana_production_type ASC);
 CREATE INDEX idx_card__is_promo ON Card(isPromo);
 CREATE INDEX idx_card__setcode ON Card(UPPER(setcode) ASC);
-CREATE INDEX idx_card__code ON Card(UPPER(code) ASC);
+
+CREATE TABLE Artist__Worked_On__Card (
+    card UUID NOT NULL,
+    artist UUID NOT NULL,
+
+    CONSTRAINT pk_artist__worked_on__card PRIMARY KEY (card, artist),
+    CONSTRAINT fk_artist__worked_on__card___card
+        FOREIGN KEY (card) REFERENCES Card (pk_card),
+    CONSTRAINT fk_artist__worked_on__card__artist
+        FOREIGN KEY (artist) REFERENCES Artist(pk_artist)
+);
 
 CREATE TABLE Keyword (
     card UUID NOT NULL,
     word VARCHAR(20) NOT NULL,
 
     CONSTRAINT pk_keyword PRIMARY KEY (card, word),
-    CONSTRAINT fk_keyword__card FOREIGN KEY (card) REFERENCES Card(pk_card)
+    CONSTRAINT fk_keyword__card FOREIGN KEY (card) REFERENCES Card(pk_card),
+    CONSTRAINT chk_keyword__is_upper CHECK (word = UPPER(word))
 );
-CREATE INDEX keyword__word ON Keyword(UPPER(word));
+CREATE INDEX indx_keyword__word ON Keyword(word);
 
 CREATE TABLE Subtype (
     card UUID NOT NULL,
     subtype VARCHAR(20) NOT NULL,
 
     CONSTRAINT pk_subtype PRIMARY KEY (card, subtype),
-    CONSTRAINT fk_subtype__card FOREIGN KEY (card) REFERENCES Card(pk_card)
+    CONSTRAINT fk_subtype__card FOREIGN KEY (card) REFERENCES Card(pk_card),
+    CONSTRAINT chk_subtype__is_upper CHECK (subtype = UPPER(subtype))
 );
 
 CREATE TABLE Card_Mana_Cost (
@@ -110,7 +134,7 @@ CREATE TABLE Card_Mana_Cost (
      * 0b111111 : {#}   this mana can be any color
      */ 
     type SMALLINT NOT NULL DEFAULT 63, -- mana type
-    amount SMALLINT NOT NULL,
+    amount SMALLINT NOT NULL DEFAULT 1,
 
     CONSTRAINT chk_card_mana_cost__amount__positive CHECK (amount > 0),
     CONSTRAINT chk_card_mana_cost__type__valid CHECK (type > 0 AND type <= 63),
@@ -122,7 +146,7 @@ CREATE TABLE Card_Mana_Cost (
 
 CREATE TABLE Card_Is_Type (
     card UUID NOT NULL,
-    type SMALLINT NOT NULL,
+    type VARCHAR(20) NOT NULL,
 
     CONSTRAINT pk_card_is_type PRIMARY KEY (card, type),
 
