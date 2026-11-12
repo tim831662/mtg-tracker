@@ -1,10 +1,3 @@
-"""
-early testing. parser partially completed.
-
-need to decide which rows are important
-
-parsing cards.csv from the MTG repo. {provide link}
-"""
 
 from collections import defaultdict
 
@@ -12,14 +5,7 @@ import csv
 import re
 import sys
 
-import pprint
-
 sys.stdout.reconfigure(encoding='utf-8')
-
-
-'''
-keyword_records = [(card_uuid, kw.upper()) for kw in keywords]
-'''
 
 with open("cards.csv", mode="r", encoding="utf-8") as f:
     cards = []
@@ -56,6 +42,8 @@ with open("cards.csv", mode="r", encoding="utf-8") as f:
             row['text']
         ))
 
+        # ST(N) = Theta(N) -> linear space-time
+
         # for every artistID, remove trim the whitespace and split the string
         temp = [a.strip() for a in row['artistIds'].split(',') if a.strip()]
         for artist in temp:
@@ -66,49 +54,43 @@ with open("cards.csv", mode="r", encoding="utf-8") as f:
         temp = [a.strip() for a in row['keywords'].split(',') if a.strip()]
         for keyword in temp:
             keywords.append((row['uuid'], keyword))
-
+    
         mana_counts = defaultdict(int)
-        temp = re.findall(r"\{([^}]+)\}", row['manaCost'])
+        temp = re.findall(r'\{([^}]+)\}', row['manaCost'])
         for mana in temp:
-            if (mana.isdigit()):
-                amount = int(symbol)
-                if amount > 0: # {INTEGER}
+            if mana.isdigit():
+                amount = int(mana)
+                if amount > 0:  # {INTEGER}
                     mana_counts[mana_any] += amount
-                else: # {CHAR}
-                    mask = 0
-                    for abbr in mana.upper():
-                        if abbr in mana_color_map:
-                            mask |= mana_color_map[abbr]
-                    if mask == 0:
-                        mask = mana_any
+            else:  # {CHAR}
+                mask = 0
+                for abbr in mana.upper():
+                    if abbr in mana_color_map:
+                        mask |= mana_color_map[abbr]
+                if mask == 0:
+                    mask = mana_any
 
-                    mana_counts[mask] += 1 # increment this mana cost
-        for mask, amount in mana_counts.items(): # add all mana costs for this card
+                mana_counts[mask] += 1  # increment this mana cost
+
+        for mask, amount in mana_counts.items():
             manas.append((row['uuid'], mask, amount))
 
-        pprint.pprint(row)
-        print('----')
-
-        print(f"UUID: {row['uuid']}")
-        print(f"Title: {row['name']}")
-        print(f"Artist: {row['artist']}")
-        print(f"Color ID: {row['colorIdentity']}")
-        print(f"Power: {row['power']}")
-        print(f"Toughness: {row['toughness']}")
-        print(f"Rarity: {row['rarity']}")
-        print(f"Produced Mana: {row['producedMana']}")
-        print(f"isPromo: {row['isPromo']}")
-        print(f"Set Code: {row['setCode']}")
-        print(f"Mana Cost: {row['manaCost']}")
-        print(f"Keywords: {row['keywords']}")
-        print(f"Text:\n{row['text']}")
-
-        print('artistIDs')
-        for artist in artists[:10]:
-            print(";".join(str(val) for val in artists))
-
-        break
-
+        if False: # True for testing
+            print('-----------------------------------------------')
+            print(f"UUID: {row['uuid']}")
+            print(f"Title: {row['name']}")
+            print(f"Artist: {row['artist']}")
+            print(f"ArtistIDs: {row['artistIds']}")
+            print(f"Color ID: {row['colorIdentity']}")
+            print(f"Power: {row['power']}")
+            print(f"Toughness: {row['toughness']}")
+            print(f"Rarity: {row['rarity']}")
+            print(f"Produced Mana: {row['producedMana']}")
+            print(f"isPromo: {row['isPromo']}")
+            print(f"Set Code: {row['setCode']}")
+            print(f"Mana Cost: {row['manaCost']}")
+            print(f"Keywords: {row['keywords']}")
+            print(f"Text:\n{row['text']}")
 
     # use records to populate database
     q_insert__card = """
@@ -140,6 +122,8 @@ with open("cards.csv", mode="r", encoding="utf-8") as f:
         ON CONFLICT (pk_artist) DO UPDATE
         SET artist = EXCLUDED.artist
         WHERE artist LIKE '% & %'
+          AND EXCLUDED.artist NOT LIKE '% & %'
+        ;
     """
 
     q_insert__worked_on = """
@@ -150,10 +134,10 @@ with open("cards.csv", mode="r", encoding="utf-8") as f:
     """
 
     q_insert__mana_cost = """
-        INSERT INTO Card_Mana_Cost (card, type) VALUES
+        INSERT INTO Card_Mana_Cost VALUES
             (%s, %s)
         ON CONFLICT (card, type) DO UPDATE SET
-            amount = amount + 1
+            amount = amount + EXCLUDED.amount
         ;
     """
 
@@ -163,7 +147,7 @@ with open("cards.csv", mode="r", encoding="utf-8") as f:
         ON CONFLICT (card, word) DO NOTHING
         ;
     """
-
+    '''
     with conn.cursor() as cur:
         if cards:
             cur.executemany(q_insert__card, cards)
