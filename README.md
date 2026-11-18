@@ -1,12 +1,132 @@
 # MTG Tracker
 
 Class project for exploring Magic: The Gathering tournament results, decklists,
-and metagame statistics. This branch adds the initial React frontend implementation.
+and metagame statistics. The current integration uses the selected **17-table,
+UUID-based PostgreSQL schema** from the `schema` branch.
 
-## React frontend implementation (Task 1)
+## Requirements
 
-Install Node.js 22.12+ (Node 22 LTS is suitable). Start the backend in a first
-terminal using **Get started** below. In a second terminal, run from the repository root:
+- Git
+- Python 3.12+ and [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Node.js 22.12+ and npm
+- Docker Desktop, installed and running, for the local PostgreSQL setup below
+
+## 1. Get the integration code
+
+Use `main` for the integrated application. For a new checkout:
+
+```powershell
+git clone https://github.com/tim831662/mtg-tracker.git
+cd mtg-tracker
+```
+
+For an existing checkout, save or commit your own changes before switching:
+
+```powershell
+git fetch origin
+git switch main
+git pull --ff-only origin main
+```
+
+Do not use the standalone `schema` branch as the application checkout. Its design
+has been integrated here with the matching backend, importer, and migration.
+
+## 2. Install dependencies and configure the environment
+
+Run from the repository root:
+
+```powershell
+uv sync --locked --extra dev
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+On macOS/Linux, use `test -f .env || cp .env.example .env` for the copy step.
+The example values are development credentials for the Docker database. Keep
+real credentials and `.env` out of Git.
+
+If reusing an existing `.env`, check that its local database host is
+`127.0.0.1` and that `POSTGRES_PORT` matches the port in `DATABASE_URL`.
+The defaults are:
+
+```dotenv
+POSTGRES_PORT=5432
+DATABASE_URL=postgresql+psycopg://mtg:mtg_local@127.0.0.1:5432/mtg_tracker
+```
+
+## 3. Start PostgreSQL
+
+Open Docker Desktop and wait for its engine to be running. From the repository root:
+
+```powershell
+docker compose up -d db
+docker compose ps
+```
+
+Wait until the database reports **healthy**. If Windows refuses port 5432 or the
+port is already occupied, choose an available port, such as 55432, and change
+both `POSTGRES_PORT` and the port inside `DATABASE_URL` in `.env`. Then rerun
+`docker compose up -d db`. Use `127.0.0.1` rather than `localhost` to match the
+Docker IPv4 binding.
+
+For a managed PostgreSQL database, set `DATABASE_URL` to its
+`postgresql+psycopg://` connection URL with the provider's SSL options; skip the
+Docker commands. Coordinate upgrades before using a shared team database.
+
+## 4. Upgrade the schema and load sample records
+
+**Existing databases:** stop the old backend and take a PostgreSQL backup before
+upgrading. For the local Docker database, these PowerShell commands save a backup
+under the ignored `tmp` directory without piping binary data through the shell:
+
+```powershell
+New-Item -ItemType Directory -Force tmp | Out-Null
+$taskBackupName = "before_uuid_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".dump"
+docker compose exec -T db pg_dump -U mtg -d mtg_tracker -Fc -f "/tmp/$taskBackupName"
+docker compose cp "db:/tmp/$taskBackupName" "tmp/$taskBackupName"
+```
+
+For managed databases, use the provider's backup procedure. A brand-new database
+does not need this backup step.
+
+For both fresh and existing application databases, run:
+
+```powershell
+uv run alembic upgrade head
+uv run alembic current
+uv run python -m mtg_tracker.importers.tournaments database/seeds/sample_tournament_data.json
+```
+
+The revision should be **`002_adopt_schema_branch (head)`**. The importer should
+finish with **`Import completed successfully`**. It loads two synthetic sample
+tournaments and six decks; rerunning it recognizes these existing records.
+Match importing is unfinished, so the sample import does not populate matchup
+statistics.
+
+The migration transfers compatible old records to the selected schema in one
+transaction. If a record violates the new constraints, the migration rolls back;
+fix the reported data rather than deleting the database. Automatic downgrade is
+unsupported: recovery uses the pre-upgrade backup. See
+[schema integration](docs/schema-integration.md) for details.
+
+Use Alembic for application initialization. Do not also run
+`database/queries/schema/mtg_schema.pgsql` against the same database; that script
+is an alternative initializer for empty-database experiments.
+
+## 5. Start the backend
+
+In the first terminal, from the repository root:
+
+```powershell
+uv run python -m uvicorn mtg_tracker.main:app --app-dir backend
+```
+
+Wait for **`Application startup complete`**. Keep this terminal running.
+API documentation is at <http://127.0.0.1:8000/docs>. The pages directly on port
+8000 are the earlier Jinja placeholders; use port 5173 for the React frontend.
+
+## 6. Start the React frontend
+
+Open a second terminal at the repository root:
 
 ```powershell
 cd frontend
@@ -14,144 +134,65 @@ npm ci
 npm run dev
 ```
 
-Open the Local URL printed by Vite (normally <http://127.0.0.1:5173>).
-Keep the FastAPI backend running on port 8000 using the instructions below;
-Vite forwards `/api` requests to it. No backend CORS changes are needed.
-The backend's port 8000 pages are still the earlier Jinja placeholders.
+Open the Local URL Vite prints, normally <http://127.0.0.1:5173>.
+Vite forwards `/api` requests to the backend on port 8000. Keep this terminal
+running too. Repeat `npm ci` after dependency changes; it is not required on
+every subsequent startup.
 
-- Dashboard and Deck Browser follow the planning wireframes with simple CSS.
-- All four screens are navigable. Deck Details and Statistics are placeholders.
-- Dashboard numbers are labeled samples. Deck Browser requests `GET /api/decks`
-  with format filtering and pagination; text search filters the current page.
-- If the API is unreachable or fails, the browser shows labeled sample decks.
-  An empty successful response stays empty. Use **Reload API** after starting
-  the backend/database. The list API does not include player/event/results yet,
-  so those columns show dashes for API records.
+## 7. Confirm it works
 
-To show database records for the meeting, complete the **Database setup** below
-and reload Deck Browser. Seeing sample decks alone does not meet that goal.
-No schema, importer, analytics, or backend behavior is changed by this UI work.
+- Open **Deck Browser**. It should say **Connected to the backend API**. A fresh
+  database shows **6 shown · 6 total** after the sample import; an existing
+  database can contain additional records.
+- Deck names include **Azorius Control - David's Build** and **Izzet Control - Alice's Build**.
+- If it says **Showing sample decks**, it is using the frontend fallback. Check
+  the backend terminal and database setup, then click **Reload API**.
+- <http://127.0.0.1:8000/api/health> should return `{ "status": "ok" }`. This is
+  application liveness only; the deck endpoint checks actual database access.
+- <http://127.0.0.1:8000/api/decks> should return database records with UUID IDs.
+- Dashboard and Deck Browser layouts work; Deck Details and Statistics remain
+  navigation placeholders. Dashboard figures are labeled samples. Player, event,
+  and result columns show dashes because the deck summary API does not include them.
 
-Frontend checks (from `frontend`): `npm test` and `npm run build`.
-This is an intermediate implementation; production serving/deployment is a later step.
+Stop the backend and frontend with Ctrl+C in their terminals. Stop the local
+database with `docker compose stop db`; its data remains in the Docker volume.
+To resume later, start the database and run the two server commands again.
 
-## Stack
+## Development checks
 
-- React and plain CSS via Vite for the frontend
-- Python 3.12+ and FastAPI for the backend; original Jinja page placeholders retained
-- PostgreSQL, SQLAlchemy, psycopg, and Alembic for persistence and migrations
-- Separate Python importers for Scryfall bulk files and MTG_decklistcache JSON
-- pytest and Ruff for development checks
-
-## Get started
-
-Install Python 3.12+ and [uv](https://docs.astral.sh/uv/getting-started/installation/).
-Clone the repository and check out `react-frontend-implementation` for this
-frontend work (or `main` after it is merged).
-
-Run these commands from the repository root:
-
-```powershell
-uv sync --locked --extra dev
-if (!(Test-Path .env)) { Copy-Item .env.example .env }
-uv run python -m uvicorn mtg_tracker.main:app --app-dir backend
-```
-
-On macOS/Linux, use `test -f .env || cp .env.example .env` for the copy step.
-
-Keep the example `.env` values as they are for now. No PostgreSQL installation,
-Docker, database account, or real database credentials are needed to run the
-skeleton. The example username/password are reserved for the optional local
-database setup below.
-
-Open <http://127.0.0.1:8000> for the screen placeholders and
-<http://127.0.0.1:8000/docs> for API documentation. The shell and health endpoint
-run without a database connection. `/api/health` reports application liveness only.
-Feature endpoints read from PostgreSQL and need a database with the migration
-applied and data imported (see below).
-
-Implemented JSON API endpoints (full contract with example responses in
-[docs/api-contract.md](docs/api-contract.md)):
-
-- `GET /api/decks` and `GET /api/decks/{id}` — browse decks, filter by
-  `format` or `archetype`, paginate; deck detail includes the card list and
-  tournament appearances.
-- `GET /api/tournaments` and `GET /api/tournaments/{id}` — browse
-  tournaments, filter by `format`; detail includes final standings.
-- `GET /api/analytics/matchups` — matchup win rates by archetype pair,
-  filterable by `format` or `tournament_id`.
-
-Leave the terminal running while using the site. Press Ctrl+C to stop it, then
-run the startup command again after editing Python files. Automatic restart via
-`--reload` is optional; the default above uses the startup mode verified locally.
-
-## Database setup (when needed)
-
-For a local database, install and start Docker Desktop, then run from the repository root:
-
-```powershell
-docker compose up -d db
-docker compose ps
-```
-
-Wait until `docker compose ps` shows the database as healthy before running
-the migration. The development credentials and port in `.env.example` match `compose.yaml`.
-If Windows reports that port 5432 is unavailable, set `POSTGRES_PORT=55432` in
-`.env` and change the port in `DATABASE_URL` to `55432` too. Then rerun
-`docker compose up -d db` and restart the backend if it is already running.
-Use `127.0.0.1` for the local database host, as in `.env.example`, to match
-Docker's IPv4 binding and avoid `localhost` connection delays on Windows.
-Alternatively, set `DATABASE_URL` in `.env` to a team PostgreSQL database using
-the `postgresql+psycopg://` URL scheme. Add the provider's required SSL options.
-Keep real credentials out of Git.
-
-Apply the existing migration and load the sample tournament data so the API
-endpoints return real records:
-
-```powershell
-uv run alembic upgrade head
-uv run python -m mtg_tracker.importers.tournaments database/seeds/sample_tournament_data.json
-```
-
-Note that the sample importer does not load match results yet (the seed file's
-matches reference entries that are not present), so matchup analytics stay
-empty until real match data is imported. Coordinate migrations before applying
-them to a shared class database.
-
-## Structure
-
-```text
-backend/mtg_tracker/
-  api/             JSON API routes for decks, tournaments, and analytics
-  core/            Environment configuration
-  db/              SQLAlchemy base and session factory
-  models/          Relational mappings
-  schemas/         Pydantic request/response contracts (frontend API contract)
-  repositories/    Database queries, including matchup win-rate SQL
-  services/        Validation and analytics logic
-  importers/       Separate batch-import entry points
-  web/             Page routes, shared templates, and CSS
-database/
-  migrations/      Alembic setup and the initial schema migration
-  queries/         Reviewed analytical SQL (matchup win rates)
-  seeds/           Small, synthetic development fixtures
-docs/              Scope, architecture, schema decisions, and team workflow
-tests/             Shell smoke tests and seeded API contract tests
-```
-
-## Development
+From the repository root:
 
 ```powershell
 uv run ruff check .
 uv run ruff format --check .
 uv run pytest
-uv run python -m mtg_tracker.importers.scryfall --help
-uv run python -m mtg_tracker.importers.tournaments --help
 ```
 
-The Scryfall importer is still a placeholder. The tournament importer loads the
-JSON data described above; match-result importing is not implemented yet.
+From `frontend`:
 
-Read [scope](docs/scope.md), [architecture](docs/architecture.md),
-[database design notes](docs/database-design.md), and
-[contribution guidance](CONTRIBUTING.md) before adding features.
+```powershell
+npm test
+npm run build
+```
+
+Without `TEST_DATABASE_URL`, regular tests use SQLite and six PostgreSQL migration
+checks are skipped. To test on PostgreSQL locally, create a dedicated test database
+once, then derive its port from Docker (omit `createdb` if it already exists):
+
+```powershell
+docker compose exec -T db createdb -U mtg mtg_tracker_test
+$taskTestDbAddress = (docker compose port db 5432).Trim()
+$env:TEST_DATABASE_URL = "postgresql+psycopg://mtg:mtg_local@$taskTestDbAddress/mtg_tracker_test"
+uv run pytest
+Remove-Item Env:TEST_DATABASE_URL
+```
+
+Tests create and remove randomly named schemas inside the test database.
+GitHub checks supply PostgreSQL and run these checks automatically.
+
+See [API contract](docs/api-contract.md), [schema integration](docs/schema-integration.md),
+[architecture](docs/architecture.md), and [contribution guidance](CONTRIBUTING.md).
+The importer still needs direct real-tournament parsing, match importing, and
+Scryfall/card-catalog enrichment. The UI and deployment also remain intermediate.
+Older Task 3 checklist files predate this integration; use the linked documents
+for the current schema and API.

@@ -1,24 +1,18 @@
-# Skeleton scope
+# Current implementation scope
 
-The supplied class brief guides the structure. Its research prompts and proposed
-implementation details are context; this change only establishes a starting point.
+Included: a React frontend with four navigation targets, Dashboard and Deck
+Browser layouts, labeled placeholder features, FastAPI database-backed deck and
+tournament endpoints, initial matchup analytics, and the selected 17-table UUID
+PostgreSQL schema with ORM mappings, initialization, and a legacy-data migration.
 
-Included: a runnable FastAPI application, four HTML screen placeholders, health
-endpoint, explicit API stubs, PostgreSQL configuration, empty migration setup,
-import command placeholders, documentation, and development checks.
+The existing normalized-JSON importer still loads sample tournaments, players,
+cards, decks, and entries. Match importing is explicitly unfinished. Catalog
+tables exist, but direct card-source parsing/enrichment remains separate work.
 
-Future work from the brief:
+This schema integration keeps the intermediate UI scope. It does not complete
+the Dashboard's live aggregates, Deck Details UI, Statistics UI, real tournament
+source integration, authentication, community submissions, or deployment.
 
-- Search decklists and inspect main deck/sideboard contents.
-- Store players, formats, tournaments, entries, and Swiss-round match results.
-- Calculate standings, leaderboards, matchup win rates, and top-8 card frequency.
-- Import card/legality data and tournament JSON with validation and repeatable imports.
-- Enforce agreed format-specific deck and match integrity rules in PostgreSQL.
-- Revisit community submissions and account requirements after agreeing the core scope.
-
-No models, tables, import logic, analytical SQL, authentication, live source calls,
-or deployment infrastructure are implemented. The UI contains no fabricated stats.
-
-Suggested implementation order: review the schema, add the initial migration and
-synthetic fixtures, implement local-file imports, add read queries/APIs, then wire
-the screens to those APIs or services. Decide submission/authentication scope separately.
+Use `docs/schema-integration.md` and `docs/api-contract.md` as the current schema
+and API references. Older Task 3 implementation/checklist files predate this
+integration and should not be used to infer current feature completion.

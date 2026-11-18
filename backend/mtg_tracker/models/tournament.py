@@ -1,185 +1,175 @@
-"""Tournament, player, deck, and match models."""
+"""UUID competition tables adapted from the selected schema branch."""
 
-from datetime import datetime
+from datetime import UTC, date, datetime
+from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    SmallInteger,
+    String,
+    Text,
+    Uuid,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mtg_tracker.db.base import Base
-
-
-class Tournament(Base):
-    """A Magic: The Gathering tournament event."""
-
-    __tablename__ = "tournaments"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
-    format: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., "Standard", "Pioneer"
-    location: Mapped[str | None] = mapped_column(String(255))
-    num_rounds: Mapped[int] = mapped_column(Integer, default=8)
-    source_url: Mapped[str | None] = mapped_column(Text)
-    source_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
-    imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    entries: Mapped[list["TournamentEntry"]] = relationship(
-        "TournamentEntry", back_populates="tournament", cascade="all, delete-orphan"
-    )
-    matches: Mapped[list["TournamentMatch"]] = relationship(
-        "TournamentMatch", back_populates="tournament", cascade="all, delete-orphan"
-    )
-
-    def __repr__(self) -> str:
-        return f"<Tournament {self.id}: {self.name} ({self.format})>"
+from mtg_tracker.models.catalog import Card, Format
 
 
 class Player(Base):
-    """A Magic player."""
+    __tablename__ = "player"
 
-    __tablename__ = "players"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    source_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
-    imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    entries: Mapped[list["TournamentEntry"]] = relationship(
-        "TournamentEntry", back_populates="player", cascade="all, delete-orphan"
+    id: Mapped[UUID] = mapped_column(
+        "pk_player", Uuid, primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
     )
-
-    def __repr__(self) -> str:
-        return f"<Player {self.id}: {self.name}>"
+    name: Mapped[str] = mapped_column("name_real", String(64))
+    username: Mapped[str | None] = mapped_column(String(32), unique=True)
+    source_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    imported_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), server_default=func.now()
+    )
+    __table_args__ = (
+        Index("idx_player__upper__username", func.upper(username)),
+        Index("idx_player__upper__name_real", func.upper(name), unique=True),
+    )
 
 
 class Deck(Base):
-    """A Magic deck."""
+    __tablename__ = "deck"
 
-    __tablename__ = "decks"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255))
-    format: Mapped[str] = mapped_column(String(50), nullable=False)
+    id: Mapped[UUID] = mapped_column(
+        "pk_deck", Uuid, primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
+    )
+    name: Mapped[str] = mapped_column("title", String(64))
+    format_id: Mapped[UUID] = mapped_column("format", ForeignKey("format.pk_format"))
     archetype: Mapped[str | None] = mapped_column(String(255))
-    source_id: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
-    imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    entries: Mapped[list["TournamentEntry"]] = relationship(
-        "TournamentEntry", back_populates="deck", cascade="all, delete-orphan"
+    source_id: Mapped[str | None] = mapped_column(String(255), unique=True)
+    imported_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), server_default=func.now()
     )
+    format_rule: Mapped[Format] = relationship(lazy="joined")
     cards: Mapped[list["CardInDeck"]] = relationship(
-        "CardInDeck", back_populates="deck", cascade="all, delete-orphan"
+        back_populates="deck", cascade="all, delete-orphan"
     )
+    __table_args__ = (Index("idx_deck__upper__name_deck", func.upper(name)),)
 
-    def __repr__(self) -> str:
-        return f"<Deck {self.id}: {self.name}>"
-
-
-class Card(Base):
-    """A Magic card."""
-
-    __tablename__ = "cards"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    mana_cost: Mapped[str | None] = mapped_column(String(50))
-    card_type: Mapped[str | None] = mapped_column(String(255))
-    scryfall_id: Mapped[str | None] = mapped_column(String(36), unique=True, index=True)
-    imported_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    deck_cards: Mapped[list["CardInDeck"]] = relationship(
-        "CardInDeck", back_populates="card", cascade="all, delete-orphan"
-    )
-
-    def __repr__(self) -> str:
-        return f"<Card {self.id}: {self.name}>"
+    @property
+    def format(self) -> str:
+        return self.format_rule.name
 
 
 class CardInDeck(Base):
-    """Association table for cards in decks with quantity and zone."""
+    __tablename__ = "card_in_deck"
 
-    __tablename__ = "cards_in_decks"
-    __table_args__ = (UniqueConstraint("deck_id", "card_id", "zone", name="uq_deck_card_zone"),)
+    deck_id: Mapped[UUID] = mapped_column("deck", ForeignKey("deck.pk_deck"), primary_key=True)
+    card_id: Mapped[UUID] = mapped_column("card", ForeignKey("card.pk_card"), primary_key=True)
+    # A card may appear in both zones; extend the branch's two-column key.
+    zone: Mapped[str] = mapped_column(String(20), primary_key=True, server_default="main")
+    quantity: Mapped[int] = mapped_column("amount", SmallInteger)
+    deck: Mapped[Deck] = relationship(back_populates="cards")
+    card: Mapped[Card] = relationship()
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="amount_positive"),
+        CheckConstraint("zone IN ('main', 'sideboard')", name="zone_valid"),
+    )
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    deck_id: Mapped[int] = mapped_column(ForeignKey("decks.id"), nullable=False, index=True)
-    card_id: Mapped[int] = mapped_column(ForeignKey("cards.id"), nullable=False, index=True)
-    zone: Mapped[str] = mapped_column(String(20), nullable=False)  # "main" or "sideboard"
-    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    deck: Mapped[Deck] = relationship("Deck", back_populates="cards")
-    card: Mapped[Card] = relationship("Card", back_populates="deck_cards")
+class Tournament(Base):
+    __tablename__ = "tournament"
 
-    def __repr__(self) -> str:
-        return f"<CardInDeck deck={self.deck_id} card={self.card_id} qty={self.quantity}>"
+    id: Mapped[UUID] = mapped_column(
+        "pk_tournament",
+        Uuid,
+        primary_key=True,
+        default=uuid4,
+        server_default=text("gen_random_uuid()"),
+    )
+    source_id: Mapped[str | None] = mapped_column("id", String(126), unique=True)
+    name: Mapped[str] = mapped_column(String(255))
+    location: Mapped[str | None] = mapped_column("loc", String(255))
+    format_id: Mapped[UUID] = mapped_column("format", ForeignKey("format.pk_format"))
+    date: Mapped[date] = mapped_column("occurred", Date)
+    description: Mapped[str | None] = mapped_column(Text)
+    num_rounds: Mapped[int] = mapped_column(Integer, server_default="8")
+    source_url: Mapped[str | None] = mapped_column(Text)
+    imported_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), server_default=func.now()
+    )
+    format_rule: Mapped[Format] = relationship(lazy="joined")
+    entries: Mapped[list["TournamentEntry"]] = relationship(
+        back_populates="tournament", cascade="all, delete-orphan"
+    )
+    matches: Mapped[list["TournamentMatch"]] = relationship(
+        back_populates="tournament", cascade="all, delete-orphan"
+    )
+    __table_args__ = (
+        Index("idx_tournament__id__upper", func.upper(source_id), unique=True),
+        Index("idx_tournament__upper_loc", func.upper(location)),
+        Index("idx_tournament__occurred", date.desc()),
+        CheckConstraint("num_rounds > 0", name="rounds_positive"),
+    )
+
+    @property
+    def format(self) -> str:
+        return self.format_rule.name
 
 
 class TournamentEntry(Base):
-    """A player's entry in a tournament with their deck."""
+    __tablename__ = "tournamententry"
 
-    __tablename__ = "tournament_entries"
-    __table_args__ = (UniqueConstraint("tournament_id", "player_id", name="uq_tournament_player"),)
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    tournament_id: Mapped[int] = mapped_column(
-        ForeignKey("tournaments.id"), nullable=False, index=True
+    player_id: Mapped[UUID] = mapped_column(
+        "player", ForeignKey("player.pk_player"), primary_key=True
     )
-    player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False, index=True)
-    deck_id: Mapped[int] = mapped_column(ForeignKey("decks.id"), nullable=False, index=True)
+    tournament_id: Mapped[UUID] = mapped_column(
+        "tournament", ForeignKey("tournament.pk_tournament"), primary_key=True
+    )
+    deck_id: Mapped[UUID] = mapped_column("deck", ForeignKey("deck.pk_deck"))
+    final_placement: Mapped[int | None] = mapped_column("placement", SmallInteger)
     seed: Mapped[int | None] = mapped_column(Integer)
-    final_placement: Mapped[int | None] = mapped_column(Integer)
-
-    tournament: Mapped[Tournament] = relationship("Tournament", back_populates="entries")
-    player: Mapped[Player] = relationship("Player", back_populates="entries")
-    deck: Mapped[Deck] = relationship("Deck", back_populates="entries")
-    matches_as_player_one: Mapped[list["TournamentMatch"]] = relationship(
-        "TournamentMatch",
-        foreign_keys="TournamentMatch.player_one_id",
-        back_populates="player_one",
-        cascade="all, delete-orphan",
-    )
-    matches_as_player_two: Mapped[list["TournamentMatch"]] = relationship(
-        "TournamentMatch",
-        foreign_keys="TournamentMatch.player_two_id",
-        back_populates="player_two",
-        cascade="all, delete-orphan",
-    )
-
-    def __repr__(self) -> str:
-        return f"<TournamentEntry tournament={self.tournament_id} player={self.player_id}>"
+    player: Mapped[Player] = relationship()
+    tournament: Mapped[Tournament] = relationship(back_populates="entries")
+    deck: Mapped[Deck] = relationship()
 
 
 class TournamentMatch(Base):
-    """A match result between two players in a tournament."""
+    __tablename__ = "tournament_match"
 
-    __tablename__ = "tournament_matches"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    tournament_id: Mapped[int] = mapped_column(
-        ForeignKey("tournaments.id"), nullable=False, index=True
+    id: Mapped[UUID] = mapped_column(
+        "pk_match", Uuid, primary_key=True, default=uuid4, server_default=text("gen_random_uuid()")
     )
-    round_num: Mapped[int] = mapped_column(Integer, nullable=False)
-    player_one_id: Mapped[int] = mapped_column(
-        ForeignKey("tournament_entries.id"), nullable=False, index=True
+    tournament_id: Mapped[UUID] = mapped_column(
+        "tournament", ForeignKey("tournament.pk_tournament")
     )
-    player_two_id: Mapped[int | None] = mapped_column(
-        ForeignKey("tournament_entries.id"), index=True
+    round_num: Mapped[int] = mapped_column("round", SmallInteger)
+    player_one_id: Mapped[UUID] = mapped_column("playera", ForeignKey("player.pk_player"))
+    player_two_id: Mapped[UUID | None] = mapped_column("playerb", ForeignKey("player.pk_player"))
+    player_one_wins: Mapped[int] = mapped_column("wina", SmallInteger, server_default="0")
+    player_two_wins: Mapped[int] = mapped_column("winb", SmallInteger, server_default="0")
+    draws: Mapped[int] = mapped_column(SmallInteger, server_default="0")
+    done: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    tournament: Mapped[Tournament] = relationship(back_populates="matches")
+    __table_args__ = (
+        CheckConstraint("wina >= 0 AND winb >= 0 AND draws >= 0", name="results_nonnegative"),
+        CheckConstraint("playerb IS NULL OR playera > playerb", name="player_order"),
+        CheckConstraint("playerb IS NOT NULL OR (winb = 0 AND draws = 0)", name="bye_valid"),
+        CheckConstraint("round > 0", name="round_positive"),
+        ForeignKeyConstraint(
+            ["playera", "tournament"],
+            ["tournamententry.player", "tournamententry.tournament"],
+            name="fk_match_playera_entry",
+        ),
+        ForeignKeyConstraint(
+            ["playerb", "tournament"],
+            ["tournamententry.player", "tournamententry.tournament"],
+            name="fk_match_playerb_entry",
+        ),
     )
-    winner_id: Mapped[int | None] = mapped_column(ForeignKey("tournament_entries.id"))
-    # For draws or byes: None winner means draw or bye
-    player_one_wins: Mapped[int] = mapped_column(Integer, default=0)
-    player_two_wins: Mapped[int] = mapped_column(Integer, default=0)
-    draws: Mapped[int] = mapped_column(Integer, default=0)
-
-    tournament: Mapped[Tournament] = relationship("Tournament", back_populates="matches")
-    player_one: Mapped[TournamentEntry] = relationship(
-        "TournamentEntry", foreign_keys=[player_one_id], back_populates="matches_as_player_one"
-    )
-    player_two: Mapped[TournamentEntry | None] = relationship(
-        "TournamentEntry", foreign_keys=[player_two_id], back_populates="matches_as_player_two"
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<TournamentMatch round={self.round_num} {self.player_one_id} vs {self.player_two_id}>"
-        )

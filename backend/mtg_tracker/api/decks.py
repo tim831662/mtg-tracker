@@ -1,6 +1,7 @@
 """Deck browsing and deck detail API."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
@@ -38,7 +39,7 @@ def list_decks(
 @router.get("/{deck_id}", response_model=DeckDetail)
 def get_deck(
     session: SessionDep,
-    deck_id: Annotated[int, Path(description="Numeric deck ID")],
+    deck_id: Annotated[UUID, Path(description="Deck UUID")],
 ) -> DeckDetail:
     """Retrieve one deck with its card list and tournament appearances."""
     deck = DeckService.get_deck_by_id(session, deck_id)

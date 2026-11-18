@@ -1,6 +1,7 @@
 """Tournament and deck business logic; SQL lives in the repositories layer."""
 
 import logging
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -16,7 +17,7 @@ class TournamentService:
     """Business logic for tournament operations."""
 
     @staticmethod
-    def get_tournament_by_id(session: Session, tournament_id: int) -> Tournament | None:
+    def get_tournament_by_id(session: Session, tournament_id: UUID) -> Tournament | None:
         """Retrieve a tournament by ID."""
         return TournamentRepository.get_by_id(session, tournament_id)
 
@@ -55,7 +56,7 @@ class TournamentService:
         )
 
     @staticmethod
-    def standings(session: Session, tournament_id: int) -> list[dict]:
+    def standings(session: Session, tournament_id: UUID) -> list[dict]:
         """Return entries ordered by final placement (nulls last)."""
         return TournamentRepository.standings(session, tournament_id)
 
@@ -64,7 +65,7 @@ class DeckService:
     """Business logic for deck operations."""
 
     @staticmethod
-    def get_deck_by_id(session: Session, deck_id: int) -> Deck | None:
+    def get_deck_by_id(session: Session, deck_id: UUID) -> Deck | None:
         """Retrieve a deck by ID."""
         return DeckRepository.get_by_id(session, deck_id)
 
@@ -97,17 +98,17 @@ class DeckService:
         return DeckRepository.count(session, format_filter, archetype)
 
     @staticmethod
-    def deck_cards(session: Session, deck_id: int) -> list[dict]:
+    def deck_cards(session: Session, deck_id: UUID) -> list[dict]:
         """Return the deck's card slots (name, quantity, zone, mana cost)."""
         return DeckRepository.cards(session, deck_id)
 
     @staticmethod
-    def deck_appearances(session: Session, deck_id: int) -> list[dict]:
+    def deck_appearances(session: Session, deck_id: UUID) -> list[dict]:
         """Return the tournaments a deck appeared in, most recent first."""
         return DeckRepository.appearances(session, deck_id)
 
     @staticmethod
-    def calculate_deck_size(session: Session, deck_id: int) -> int:
+    def calculate_deck_size(session: Session, deck_id: UUID) -> int:
         """Calculate the total number of cards in a deck's main deck."""
         from mtg_tracker.models import CardInDeck
 
@@ -119,7 +120,7 @@ class DeckService:
         return sum(qty[0] for qty in result)
 
     @staticmethod
-    def calculate_sideboard_size(session: Session, deck_id: int) -> int:
+    def calculate_sideboard_size(session: Session, deck_id: UUID) -> int:
         """Calculate the total number of cards in a deck's sideboard."""
         from mtg_tracker.models import CardInDeck
 
@@ -132,14 +133,14 @@ class DeckService:
 
     @staticmethod
     def validate_deck_legality(
-        session: Session, deck_id: int, format_name: str
+        session: Session, deck_id: UUID, format_name: str
     ) -> tuple[bool, list[str]]:
         """
         Validate deck legality for a given format.
         Returns (is_legal, errors).
 
         Currently implements basic checks:
-        - Deck size should be at least 60 cards for most formats
+        - Deck size and copy limit come from the selected format row
         - Sideboard should be at most 15 cards
         - Card copies should not exceed 4 per card (with some exceptions)
         """
@@ -153,9 +154,11 @@ class DeckService:
         main_size = DeckService.calculate_deck_size(session, deck_id)
         sideboard_size = DeckService.calculate_sideboard_size(session, deck_id)
 
-        # Basic format-agnostic checks
-        if main_size < 60:
-            errors.append(f"Deck size is {main_size}, must be at least 60")
+        rule = deck.format_rule
+        if rule.name.casefold() != format_name.casefold():
+            errors.append(f"Deck belongs to {rule.name}, not {format_name}")
+        if main_size < rule.minimum_size:
+            errors.append(f"Deck size is {main_size}, must be at least {rule.minimum_size}")
         if sideboard_size > 15:
             errors.append(f"Sideboard size is {sideboard_size}, must be at most 15")
 
@@ -168,10 +171,18 @@ class DeckService:
         )
 
         for card_name, quantity in card_counts:
-            # Some cards are allowed up to 5+ copies (e.g., "Relentless Rats")
-            # For now, enforce 4 as default
-            if quantity > 4 and card_name not in ["Relentless Rats", "Seven Dwarfs"]:
-                errors.append(f"Card '{card_name}' has {quantity} copies, maximum is 4")
+            if (
+                rule.copy_limit
+                and quantity > rule.copy_limit
+                and card_name
+                not in [
+                    "Relentless Rats",
+                    "Seven Dwarfs",
+                ]
+            ):
+                errors.append(
+                    f"Card '{card_name}' has {quantity} copies, maximum is {rule.copy_limit}"
+                )
 
         is_legal = len(errors) == 0
         return is_legal, errors

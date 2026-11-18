@@ -1,28 +1,31 @@
 # Architecture
 
-One Python application serves the API and simple Jinja HTML pages. This follows
-the brief's FastAPI/Python direction and keeps the initial project free of a
-separate JavaScript toolchain. A richer frontend can be added later if needed.
-
-Request flow when implemented:
+React and plain CSS in `frontend/` provide the UI. Vite proxies `/api` to the
+FastAPI backend on port 8000. The earlier Jinja HTML placeholders remain at the
+backend's page routes; the React UI runs on Vite's port.
 
 ```text
-HTML pages / API -> schemas -> services -> repositories -> PostgreSQL
-Local JSON files -> importers -> services / repositories -> PostgreSQL
+React -> API schemas -> services -> repositories -> selected PostgreSQL schema
+JSON files -> tournament importer -> the same ORM mappings and database
 ```
 
-`main.py` composes the application. `core` reads environment settings. `db` owns
-SQLAlchemy metadata and lazy session setup. `models` defines tables; `schemas`
-defines public contracts. Services own validation, calculations, and transaction
-boundaries. Repositories own queries. API routes handle HTTP concerns. Web routes
-render templates. Avoid importing API or web modules into the persistence layer.
+The selected schema is the 17-table UUID design from the `schema` branch. The
+active mappings are `models/catalog.py` and `models/tournament.py`; both are
+registered in `models/__init__.py`. Python attribute names map to the design's
+physical names, for example `Deck.id` to `deck.pk_deck`.
 
-Alembic owns schema changes; the application does not create tables at startup.
-Future model modules must be imported in `models/__init__.py` for Alembic discovery.
-Application liveness and page placeholders intentionally need no database access.
+Alembic owns upgrades. Revision 001 records the old schema for existing installs;
+revision 002 creates the selected schema, transfers compatible data, and removes
+the retired tables in a single PostgreSQL transaction. Its DDL snapshot is frozen
+under `database/migrations/sql/`. The standalone initializer is an alternative
+for empty database experiments, not a second application migration path.
 
-Source integrations are batch jobs, separate from web requests. The planned
-Scryfall importer reads a previously downloaded bulk file; the tournament importer
-reads a local MTG_decklistcache checkout. Add cleaning, rejected-record reporting,
-source provenance, and idempotency before importing real data. Source schemas and
-access policies must be checked when implementing those integrations.
+API response formats remain separate from physical database names. Entity IDs
+are UUIDs; tournament entries use composite keys. Services own business logic,
+repositories own queries, and routes own HTTP validation and serialization.
+The API contract and schema integration documents describe the intentional
+changes and compatibility extensions.
+
+The existing tournament importer accepts the project's normalized JSON. Direct
+MTG_decklistcache parsing, match importing, and catalog enrichment remain future
+work. Batch importing stays separate from HTTP requests.

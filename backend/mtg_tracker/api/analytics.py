@@ -1,6 +1,7 @@
 """Metagame analytics API: matchup win rates."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -24,7 +25,7 @@ def analytics_index() -> dict[str, list[str]]:
 def matchup_win_rates(
     session: SessionDep,
     format: Annotated[str | None, Query(description="Filter by format, e.g. Standard")] = None,
-    tournament_id: Annotated[int | None, Query(description="Restrict to one tournament")] = None,
+    tournament_id: Annotated[UUID | None, Query(description="Restrict to one tournament")] = None,
     min_matches: Annotated[
         int, Query(ge=1, description="Exclude archetype pairs with fewer matches")
     ] = 1,

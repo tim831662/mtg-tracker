@@ -46,7 +46,7 @@ def example_query_tournaments():
         tournaments = TournamentService.list_tournaments(session)
         print(f"Found {len(tournaments)} tournaments:")
         for t in tournaments:
-            print(f"  - {t.name} ({t.format}) on {t.date.date()}")
+            print(f"  - {t.name} ({t.format}) on {t.date}")
 
         # Get tournaments by format
         pioneer_tournaments = TournamentService.list_tournaments(session, format_filter="Pioneer")
@@ -136,19 +136,23 @@ def example_tournament_standings():
 
 def example_create_tournament():
     """Create a new tournament programmatically."""
-    from datetime import datetime
+    from datetime import date
 
     from mtg_tracker.db.session import get_session_factory
-    from mtg_tracker.models import Tournament
+    from mtg_tracker.models import Format, Tournament
 
     session_factory = get_session_factory()
 
     with session_factory() as session:
-        # Create new tournament
+        # Resolve the normalized format before creating a tournament.
+        standard = session.query(Format).filter_by(name="Standard").first()
+        if standard is None:
+            standard = Format(name="Standard")
+            session.add(standard)
         tournament = Tournament(
             name="Regional Qualifier 2024",
-            date=datetime(2024, 5, 15),
-            format="Standard",
+            date=date(2024, 5, 15),
+            format_rule=standard,
             location="Regional Center",
             num_rounds=9,
             source_id="rq_2024_05",
@@ -175,7 +179,7 @@ def example_archetype_analysis():
     with session_factory() as session:
         # Count decks by archetype
         archetype_counts = (
-            session.query(Deck.archetype, func.count(TournamentEntry.id))
+            session.query(Deck.archetype, func.count(TournamentEntry.player_id))
             .join(TournamentEntry, TournamentEntry.deck_id == Deck.id)
             .group_by(Deck.archetype)
             .all()
@@ -228,7 +232,7 @@ def example_export_deck():
                 deck_data["sideboard"].append(card_info)
 
         print("\nExported deck:")
-        print(json.dumps(deck_data, indent=2))
+        print(json.dumps(deck_data, indent=2, default=str))
 
 
 # ============================================================================
@@ -263,15 +267,16 @@ def example_find_card_usage():
 def example_format_statistics():
     """Calculate statistics for a format."""
     from mtg_tracker.db.session import get_session_factory
-    from mtg_tracker.models import Tournament, TournamentEntry
+    from mtg_tracker.models import Format, Tournament, TournamentEntry
     from sqlalchemy import func
 
     session_factory = get_session_factory()
 
     with session_factory() as session:
         formats = (
-            session.query(Tournament.format, func.count(Tournament.id))
-            .group_by(Tournament.format)
+            session.query(Format.name, func.count(Tournament.id))
+            .join(Tournament, Tournament.format_id == Format.id)
+            .group_by(Format.name)
             .all()
         )
 
@@ -281,9 +286,9 @@ def example_format_statistics():
 
             # Get average tournament size for this format
             entries = (
-                session.query(func.count(TournamentEntry.id).label("total"))
+                session.query(func.count(TournamentEntry.player_id).label("total"))
                 .join(Tournament)
-                .filter(Tournament.format == format_name)
+                .filter(Tournament.format_rule.has(Format.name == format_name))
                 .scalar()
             )
             if count > 0:
@@ -341,7 +346,7 @@ def example_backup_data():
         }
 
         with open("backup_tournament_data.json", "w") as f:
-            json.dump(backup, f, indent=2)
+            json.dump(backup, f, indent=2, default=str)
 
         print("✅ Data exported to backup_tournament_data.json")
 

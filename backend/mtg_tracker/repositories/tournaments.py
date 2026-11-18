@@ -1,8 +1,10 @@
 """SQL queries for tournaments and their standings."""
 
+from uuid import UUID
+
 from sqlalchemy.orm import Session, selectinload
 
-from mtg_tracker.models import Deck, Player, Tournament, TournamentEntry
+from mtg_tracker.models import Deck, Format, Player, Tournament, TournamentEntry
 
 
 class TournamentRepository:
@@ -22,7 +24,7 @@ class TournamentRepository:
             .order_by(Tournament.date.desc(), Tournament.id)
         )
         if format_filter:
-            query = query.filter(Tournament.format == format_filter)
+            query = query.filter(Tournament.format_rule.has(Format.name == format_filter))
         if offset is not None:
             query = query.offset(offset)
         if limit is not None:
@@ -33,11 +35,11 @@ class TournamentRepository:
     def count(session: Session, format_filter: str | None = None) -> int:
         query = session.query(Tournament)
         if format_filter:
-            query = query.filter(Tournament.format == format_filter)
+            query = query.filter(Tournament.format_rule.has(Format.name == format_filter))
         return query.count()
 
     @staticmethod
-    def get_by_id(session: Session, tournament_id: int) -> Tournament | None:
+    def get_by_id(session: Session, tournament_id: UUID) -> Tournament | None:
         return (
             session.query(Tournament)
             .options(selectinload(Tournament.entries))
@@ -50,7 +52,7 @@ class TournamentRepository:
         return session.query(Tournament).filter_by(source_id=source_id).first()
 
     @staticmethod
-    def standings(session: Session, tournament_id: int) -> list[dict]:
+    def standings(session: Session, tournament_id: UUID) -> list[dict]:
         """Return one row per entry, ordered by final placement (nulls last)."""
         rows = (
             session.query(TournamentEntry, Player, Deck)
@@ -61,7 +63,7 @@ class TournamentRepository:
         )
         standings = [
             {
-                "entry_id": entry.id,
+                "tournament_id": entry.tournament_id,
                 "player_id": player.id,
                 "player_name": player.name,
                 "deck_id": deck.id,

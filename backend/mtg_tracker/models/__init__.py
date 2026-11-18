@@ -1,11 +1,19 @@
-"""Define relational models here and import them here for Alembic discovery.
+"""The selected 17-table schema, registered for ORM and Alembic discovery."""
 
-Planned: cards, mana types/costs, card types, formats/restrictions, decks/deck cards,
-players, tournaments, entries, and matches. See docs/database-design.md first.
-"""
-
-from mtg_tracker.models.tournament import (
+from mtg_tracker.models.catalog import (
+    Artist,
+    ArtistWorkedOnCard,
     Card,
+    CardIsType,
+    CardManaCost,
+    Format,
+    FormatRestriction,
+    Keyword,
+    Mana,
+    Rarity,
+    Subtype,
+)
+from mtg_tracker.models.tournament import (
     CardInDeck,
     Deck,
     Player,
@@ -15,11 +23,21 @@ from mtg_tracker.models.tournament import (
 )
 
 __all__ = [
-    "Tournament",
-    "Player",
-    "Deck",
+    "Artist",
+    "ArtistWorkedOnCard",
     "Card",
     "CardInDeck",
+    "CardIsType",
+    "CardManaCost",
+    "Deck",
+    "Format",
+    "FormatRestriction",
+    "Keyword",
+    "Mana",
+    "Player",
+    "Rarity",
+    "Subtype",
+    "Tournament",
     "TournamentEntry",
     "TournamentMatch",
 ]

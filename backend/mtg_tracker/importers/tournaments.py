@@ -5,11 +5,13 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from mtg_tracker.db.session import get_session_factory
-from mtg_tracker.models import Card, CardInDeck, Deck, Player, Tournament, TournamentEntry
+from mtg_tracker.models import Card, CardInDeck, Deck, Format, Player, Tournament, TournamentEntry
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -27,10 +29,23 @@ class TournamentImporter:
         self.deck_map = {}  # Maps source IDs to Deck objects
         self.entry_map = {}  # Maps (tournament_id, player_id) to TournamentEntry objects
 
+    def get_format(self, name: str) -> Format:
+        """Resolve the schema branch's normalized format row."""
+        name = name.strip() or "Unknown"
+        existing = (
+            self.session.query(Format).filter(func.upper(Format.name) == name.upper()).first()
+        )
+        if existing:
+            return existing
+        record = Format(name=name)
+        self.session.add(record)
+        self.session.flush()
+        return record
+
     def load_json(self, file_path: Path) -> dict:
         """Load tournament data from JSON file."""
         logger.info(f"Loading data from {file_path}")
-        with open(file_path) as f:
+        with open(file_path, encoding="utf-8") as f:
             return json.load(f)
 
     def import_tournaments(self, data: dict) -> None:
@@ -54,8 +69,8 @@ class TournamentImporter:
 
             tournament = Tournament(
                 name=tournament_data["name"],
-                date=datetime.fromisoformat(tournament_data["date"]),
-                format=tournament_data.get("format", "Unknown"),
+                date=datetime.fromisoformat(tournament_data["date"]).date(),
+                format_rule=self.get_format(tournament_data.get("format", "Unknown")),
                 location=tournament_data.get("location"),
                 num_rounds=tournament_data.get("num_rounds", 8),
                 source_url=tournament_data.get("source_url"),
@@ -94,8 +109,13 @@ class TournamentImporter:
             existing = None
             if card_data.get("scryfall_id"):
                 existing = (
+                    self.session.query(Card).filter_by(id=UUID(card_data["scryfall_id"])).first()
+                )
+
+            if existing is None:
+                existing = (
                     self.session.query(Card)
-                    .filter_by(scryfall_id=card_data.get("scryfall_id"))
+                    .filter(func.upper(Card.name) == card_data["name"].upper())
                     .first()
                 )
 
@@ -109,7 +129,7 @@ class TournamentImporter:
                 name=card_data["name"],
                 mana_cost=card_data.get("mana_cost"),
                 card_type=card_data.get("card_type"),
-                scryfall_id=card_data.get("scryfall_id"),
+                **({"id": UUID(card_data["scryfall_id"])} if card_data.get("scryfall_id") else {}),
             )
             self.session.add(card)
             self.card_map[card_data["id"]] = card
@@ -131,7 +151,7 @@ class TournamentImporter:
 
             deck = Deck(
                 name=deck_data["name"],
-                format=deck_data.get("format", "Unknown"),
+                format_rule=self.get_format(deck_data.get("format", "Unknown")),
                 archetype=deck_data.get("archetype"),
                 source_id=deck_data.get("id"),
             )

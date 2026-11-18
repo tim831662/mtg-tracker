@@ -6,7 +6,7 @@ const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 
 test('reads the backend list contract and sends format and pagination', async () => {
-  const data = { items: [{ id: 1, name: 'Mono Red', format: 'Standard', archetype: 'Aggro' }], total: 21, limit: 20, offset: 20 };
+  const data = { items: [{ id: '00000000-0000-0000-0000-000000000001', name: 'Mono Red', format: 'Standard', archetype: 'Aggro' }], total: 21, limit: 20, offset: 20 };
   globalThis.fetch = async url => {
     assert.equal(url, '/api/decks?limit=20&offset=20&format=Standard');
     return Response.json(data);

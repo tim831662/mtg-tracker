@@ -1,6 +1,7 @@
 """Response contracts for deck endpoints. Field names are the frontend API contract."""
 
-from datetime import datetime
+from datetime import date
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
@@ -10,7 +11,7 @@ class DeckSummary(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: UUID
     name: str
     format: str
     archetype: str | None = None
@@ -28,10 +29,10 @@ class DeckCard(BaseModel):
 class DeckAppearance(BaseModel):
     """One tournament appearance of a deck."""
 
-    tournament_id: int
+    tournament_id: UUID
     tournament_name: str
-    tournament_date: datetime
-    player_id: int
+    tournament_date: date
+    player_id: UUID
     player_name: str
     final_placement: int | None = None
 

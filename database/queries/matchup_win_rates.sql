@@ -1,51 +1,28 @@
--- Matchup win rates by deck archetype pair (PostgreSQL).
---
--- The application runs the portable SUM(CASE ...) version in
--- backend/mtg_tracker/repositories/matchups.py; this file is the reviewed
--- PostgreSQL equivalent kept here for documentation and ad-hoc analysis.
---
--- Definitions:
---   * A "match" is a tournament_matches row with both player_one and
---     player_two; byes (player_two_id IS NULL) are excluded.
---   * Draws (winner_id IS NULL with two players) count toward
---     matches_played but toward neither side's wins.
---   * win_rate_a = wins_a / matches_played (draws count as non-wins).
---   * Rows are directional: ("Aggro", "Control") covers matches where the
---     Aggro player was seated as player one.
---   * Decks without an archetype fall back to the deck name.
---
--- Bind parameters (all optional except min_matches):
---   :format_filter   e.g. 'Standard'; NULL disables the filter
---   :tournament_id   restrict to one tournament; NULL disables the filter
---   :min_matches     exclude archetype pairs with fewer matches (default 1)
-
+-- PostgreSQL matchup query for the selected schema.
+-- Only completed, non-bye matches count. Equal game scores are a match draw.
+-- A/B follows canonical player UUID order (playera > playerb), not archetype order.
+-- Bind :format_filter (text or NULL), :tournament_id (UUID or NULL), :min_matches.
 WITH matchups AS (
     SELECT
-        COALESCE(da.archetype, da.name) AS archetype_a,
-        COALESCE(db.archetype, db.name) AS archetype_b,
+        COALESCE(da.archetype, da.title) AS archetype_a,
+        COALESCE(db.archetype, db.title) AS archetype_b,
         COUNT(*) AS matches_played,
-        COUNT(*) FILTER (WHERE m.winner_id = e1.id) AS wins_a,
-        COUNT(*) FILTER (WHERE m.winner_id = e2.id) AS wins_b,
-        COUNT(*) FILTER (WHERE m.winner_id IS NULL) AS draws
-    FROM tournament_matches m
-    JOIN tournament_entries e1 ON e1.id = m.player_one_id
-    JOIN tournament_entries e2 ON e2.id = m.player_two_id
-    JOIN decks da ON da.id = e1.deck_id
-    JOIN decks db ON db.id = e2.deck_id
-    JOIN tournaments t ON t.id = m.tournament_id
-    WHERE m.player_two_id IS NOT NULL
-      AND (:format_filter IS NULL OR t.format = :format_filter)
-      AND (:tournament_id IS NULL OR m.tournament_id = :tournament_id)
-    GROUP BY COALESCE(da.archetype, da.name), COALESCE(db.archetype, db.name)
+        COUNT(*) FILTER (WHERE m.wina > m.winb) AS wins_a,
+        COUNT(*) FILTER (WHERE m.winb > m.wina) AS wins_b,
+        COUNT(*) FILTER (WHERE m.wina = m.winb) AS draws
+    FROM tournament_match m
+    JOIN tournamententry ea ON ea.player = m.playera AND ea.tournament = m.tournament
+    JOIN tournamententry eb ON eb.player = m.playerb AND eb.tournament = m.tournament
+    JOIN deck da ON da.pk_deck = ea.deck
+    JOIN deck db ON db.pk_deck = eb.deck
+    JOIN tournament t ON t.pk_tournament = m.tournament
+    JOIN format f ON f.pk_format = t.format
+    WHERE m.done = TRUE AND m.playerb IS NOT NULL
+      AND (CAST(:format_filter AS TEXT) IS NULL OR f.name_format = :format_filter)
+      AND (CAST(:tournament_id AS UUID) IS NULL OR t.pk_tournament = :tournament_id)
+    GROUP BY COALESCE(da.archetype, da.title), COALESCE(db.archetype, db.title)
     HAVING COUNT(*) >= :min_matches
 )
-SELECT
-    archetype_a,
-    archetype_b,
-    matches_played,
-    wins_a,
-    wins_b,
-    draws,
-    ROUND(wins_a::numeric / NULLIF(matches_played, 0), 4) AS win_rate_a
+SELECT *, ROUND(wins_a::numeric / NULLIF(matches_played, 0), 4) AS win_rate_a
 FROM matchups
 ORDER BY matches_played DESC, archetype_a, archetype_b;

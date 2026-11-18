@@ -1,6 +1,7 @@
 """Matchup and metagame analytics business logic."""
 
 import logging
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -17,7 +18,7 @@ class MatchupService:
         session: Session,
         *,
         format_filter: str | None = None,
-        tournament_id: int | None = None,
+        tournament_id: UUID | None = None,
         min_matches: int = 1,
     ) -> list[dict]:
         """Return directional archetype-pair win rates.

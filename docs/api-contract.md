@@ -1,91 +1,37 @@
 # API contract
 
-JSON API for the MTG Tracker frontend. All endpoints live under the `/api`
-prefix; the HTML pages (`/`, `/decks`, `/tournaments`) are separate and return
-HTML. Interactive documentation (OpenAPI/Swagger) is served at `/docs` and the
-machine-readable schema at `/openapi.json` while the server runs.
+The FastAPI JSON API lives under `/api`. The React development server proxies
+that prefix to FastAPI. `/docs` and `/openapi.json` describe the same Pydantic
+response models used by the routes.
 
-Every response model here is also defined in code under
-`backend/mtg_tracker/schemas/`, so the OpenAPI schema is the source of truth
-if this document drifts.
+## Shared conventions
 
-## Conventions
+- Entity IDs are UUID strings. Malformed IDs return 422; unknown valid UUIDs
+  return 404 on detail endpoints.
+- List responses are `{ "items": [...], "total": 0, "limit": 20, "offset": 0 }`.
+  `total` ignores pagination. Limit defaults to 20 and is capped at 100.
+- Dates are calendar dates, `YYYY-MM-DD`, matching `tournament.occurred`.
+- Format filters use the normalized format name (for example `Standard`).
+- Error bodies follow FastAPI's `detail` convention.
+- Standings identify entries by `(player_id, tournament_id)`. There is no
+  separate `entry_id` in the selected schema.
 
-- **List envelope**: every list endpoint returns
-  `{ "items": [...], "total": <int>, "limit": <int>, "offset": <int> }`.
-  `total` is the number of records matching the filters (ignoring
-  pagination), so you can compute page counts.
-- **Pagination**: `limit` (default 20, max 100) and `offset` (default 0)
-  query parameters on list endpoints.
-- **Filters**: `format` (e.g. `Standard`, `Pioneer`, case-sensitive exact
-  match) on decks, tournaments, and matchups.
-- **Dates**: ISO 8601 strings (e.g. `"2024-03-15T00:00:00"`).
-- **Errors**: FastAPI style — `{"detail": "<message>"}` with an appropriate
-  status code. Unknown IDs return `404`.
-- **IDs**: integer database keys.
+This is an intentional contract change from numeric IDs and timestamp-formatted
+calendar dates. The existing React browser already treats IDs as opaque URL
+values; no new UI features are included in the schema integration.
 
 ## GET /api/decks
 
-List decks. Query parameters: `format`, `archetype`, `limit`, `offset`.
-
-```json
-{
-  "items": [
-    {"id": 1, "name": "Mono Red", "format": "Standard", "archetype": "Aggro"},
-    {"id": 2, "name": "Azorius Control", "format": "Standard", "archetype": "Control"}
-  ],
-  "total": 2,
-  "limit": 20,
-  "offset": 0
-}
-```
-
-## GET /api/decks/{deck_id}
-
-One deck with its card list and tournament appearances. `cards` is a flat
-list; group by `zone` (`"main"` / `"sideboard"`) in the UI.
-`maindeck_size` / `sideboard_size` are the summed quantities per zone.
-
-```json
-{
-  "id": 1,
-  "name": "Mono Red",
-  "format": "Standard",
-  "archetype": "Aggro",
-  "cards": [
-    {"name": "Lightning Bolt", "quantity": 4, "zone": "main", "mana_cost": "{R}"}
-  ],
-  "maindeck_size": 4,
-  "sideboard_size": 0,
-  "appearances": [
-    {
-      "tournament_id": 1,
-      "tournament_name": "Standard Showdown",
-      "tournament_date": "2024-03-15T00:00:00",
-      "player_id": 1,
-      "player_name": "Alice",
-      "final_placement": 2
-    }
-  ]
-}
-```
-
-## GET /api/tournaments
-
-List tournaments, newest first. Query parameters: `format`, `limit`,
-`offset`. `player_count` is the number of recorded entries.
+Optional parameters: `format`, `archetype`, `limit`, `offset`.
 
 ```json
 {
   "items": [
     {
-      "id": 2,
-      "name": "Pioneer Preliminary",
-      "format": "Pioneer",
-      "date": "2024-04-20T00:00:00",
-      "location": "Convention Center",
-      "num_rounds": 6,
-      "player_count": 2
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "Mono Red",
+      "format": "Standard",
+      "archetype": "Aggro"
     }
   ],
   "total": 1,
@@ -94,72 +40,63 @@ List tournaments, newest first. Query parameters: `format`, `limit`,
 }
 ```
 
+The summary does not include player, event, or results. Those remain available
+through deck appearances and tournament standings.
+
+## GET /api/decks/{deck_id}
+
+Returns the deck summary fields plus:
+
+- `cards`: objects with `name`, `quantity`, `zone` (`main` or `sideboard`), and
+  nullable `mana_cost` containing the original text.
+- `maindeck_size`, `sideboard_size`: summed quantities in each zone.
+- `appearances`: objects with UUID `tournament_id`, `tournament_name`, calendar
+  `tournament_date`, UUID `player_id`, `player_name`, and nullable `final_placement`.
+
+## GET /api/tournaments
+
+Optional parameters: `format`, `limit`, `offset`. Newest events come first.
+Each item has UUID `id`, `name`, `format`, calendar `date`, nullable `location`,
+`num_rounds`, and `player_count` (the count of stored entries).
+
 ## GET /api/tournaments/{tournament_id}
 
-One tournament with its standings, ordered by `final_placement`
-(nulls last). `final_placement` and `seed` may be `null`.
+Returns those summary fields and `standings`, ordered by placement (nulls last):
 
 ```json
 {
-  "id": 1,
-  "name": "Standard Showdown",
-  "format": "Standard",
-  "date": "2024-03-15T00:00:00",
-  "location": "Game Store",
-  "num_rounds": 5,
-  "player_count": 4,
-  "standings": [
-    {
-      "entry_id": 2,
-      "player_id": 2,
-      "player_name": "Bob",
-      "deck_id": 2,
-      "deck_name": "Azorius Control",
-      "archetype": "Control",
-      "seed": 2,
-      "final_placement": 1
-    }
-  ]
+  "tournament_id": "00000000-0000-0000-0000-000000000002",
+  "player_id": "00000000-0000-0000-0000-000000000003",
+  "player_name": "Alice",
+  "deck_id": "00000000-0000-0000-0000-000000000001",
+  "deck_name": "Mono Red",
+  "archetype": "Aggro",
+  "seed": 1,
+  "final_placement": 2
 }
 ```
 
 ## GET /api/analytics
 
-Index of analytics resources: `{"endpoints": ["matchups"]}`.
+Returns `{ "endpoints": ["matchups"] }`.
 
 ## GET /api/analytics/matchups
 
-Matchup win rates by archetype pair, most-played pairs first. Query
-parameters: `format`, `tournament_id`, `min_matches` (default 1).
+Optional parameters: `format`, UUID `tournament_id`, and positive `min_matches`
+(default 1). Response: `{ "items": [...] }`, with each item containing
+`archetype_a`, `archetype_b`, `matches_played`, `wins_a`, `wins_b`, `draws`, and
+`win_rate_a` rounded to four decimal places.
 
-Definitions agreed with the data model (see
-`database/queries/matchup_win_rates.sql`):
+Only `done = true` matches with two players count. More game wins determines the
+match winner; equal game wins means a match draw. Draws count in matches played
+but neither side's wins. `win_rate_a = wins_a / matches_played`.
 
-- Byes (matches without an opponent) are **excluded**.
-- Drawn matches count toward `matches_played` but toward neither side's
-  wins, so `win_rate_a = wins_a / matches_played`.
-- Rows are **directional**: `("Aggro", "Control")` covers matches where the
-  Aggro player was seated as player one. The reverse pair is a separate row.
-- Decks without an archetype fall back to the deck name.
+A/B follows the schema's canonical player UUID order (`playera > playerb`), not
+archetype name order. Archetypes can consequently appear in either direction.
+The portable application query lives in `repositories/matchups.py`; the matching
+PostgreSQL query is in `database/queries/matchup_win_rates.sql`.
 
-```json
-{
-  "items": [
-    {
-      "archetype_a": "Aggro",
-      "archetype_b": "Control",
-      "matches_played": 3,
-      "wins_a": 2,
-      "wins_b": 1,
-      "draws": 0,
-      "win_rate_a": 0.6667
-    }
-  ]
-}
-```
+## Remaining feature work
 
-## Suggested follow-ups (not implemented yet)
-
-- Text search on deck/player names.
-- Metagame share (`archetype` counts per tournament/format).
-- Card frequency among top-8 decklists.
+Real tournament/match ingestion, catalog enrichment, dashboard aggregates, and
+server-side text search are not completed by the schema integration.

@@ -1,5 +1,7 @@
 """API contract tests for decks, tournaments, and matchup analytics."""
 
+from uuid import UUID
+
 import pytest
 
 
@@ -8,6 +10,7 @@ def test_list_decks(client, seeded):
     assert body["total"] == 4
     assert len(body["items"]) == 4
     assert {"id", "name", "format", "archetype"} <= set(body["items"][0])
+    assert all(isinstance(UUID(deck["id"]), UUID) for deck in body["items"])
 
 
 def test_list_decks_format_filter(client, seeded):
@@ -44,7 +47,7 @@ def test_deck_detail(client, seeded):
 
 
 def test_deck_detail_not_found(client, seeded):
-    response = client.get("/api/decks/999")
+    response = client.get("/api/decks/00000000-0000-0000-0000-000000000099")
     assert response.status_code == 404
     assert "not found" in response.json()["detail"]
 
@@ -74,10 +77,18 @@ def test_tournament_detail_standings(client, seeded):
     assert placements == sorted(placements)
     assert body["standings"][0]["player_name"] == "Bob"
     assert body["standings"][0]["deck_name"] == "Azorius Control"
+    assert body["date"] == "2024-03-15"
+    assert body["standings"][0]["tournament_id"] == body["id"]
+    assert "entry_id" not in body["standings"][0]
+
+
+@pytest.mark.parametrize("path", ["/api/decks/1", "/api/tournaments/1"])
+def test_identifiers_must_be_uuids(client, path):
+    assert client.get(path).status_code == 422
 
 
 def test_tournament_detail_not_found(client, seeded):
-    assert client.get("/api/tournaments/999").status_code == 404
+    assert client.get("/api/tournaments/00000000-0000-0000-0000-000000000099").status_code == 404
 
 
 def test_analytics_index(client, seeded):

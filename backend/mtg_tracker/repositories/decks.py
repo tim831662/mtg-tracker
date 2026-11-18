@@ -1,8 +1,10 @@
 """SQL queries for decks, decklists, and tournament appearances."""
 
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 
-from mtg_tracker.models import Card, CardInDeck, Deck, Player, Tournament, TournamentEntry
+from mtg_tracker.models import Card, CardInDeck, Deck, Format, Player, Tournament, TournamentEntry
 
 
 class DeckRepository:
@@ -19,7 +21,7 @@ class DeckRepository:
     ) -> list[Deck]:
         query = session.query(Deck).order_by(Deck.name, Deck.id)
         if format_filter:
-            query = query.filter(Deck.format == format_filter)
+            query = query.filter(Deck.format_rule.has(Format.name == format_filter))
         if archetype:
             query = query.filter(Deck.archetype == archetype)
         if offset is not None:
@@ -36,13 +38,13 @@ class DeckRepository:
     ) -> int:
         query = session.query(Deck)
         if format_filter:
-            query = query.filter(Deck.format == format_filter)
+            query = query.filter(Deck.format_rule.has(Format.name == format_filter))
         if archetype:
             query = query.filter(Deck.archetype == archetype)
         return query.count()
 
     @staticmethod
-    def get_by_id(session: Session, deck_id: int) -> Deck | None:
+    def get_by_id(session: Session, deck_id: UUID) -> Deck | None:
         return session.query(Deck).filter_by(id=deck_id).first()
 
     @staticmethod
@@ -50,7 +52,7 @@ class DeckRepository:
         return session.query(Deck).filter_by(source_id=source_id).first()
 
     @staticmethod
-    def cards(session: Session, deck_id: int) -> list[dict]:
+    def cards(session: Session, deck_id: UUID) -> list[dict]:
         """Return the deck's card slots ordered by zone then card name."""
         rows = (
             session.query(CardInDeck, Card)
@@ -70,7 +72,7 @@ class DeckRepository:
         ]
 
     @staticmethod
-    def appearances(session: Session, deck_id: int) -> list[dict]:
+    def appearances(session: Session, deck_id: UUID) -> list[dict]:
         """Return the tournaments a deck appeared in, most recent first."""
         rows = (
             session.query(Tournament, Player, TournamentEntry.final_placement)

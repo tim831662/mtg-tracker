@@ -1,6 +1,7 @@
 """Tournament browsing and standings API."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
@@ -37,7 +38,7 @@ def list_tournaments(
 @router.get("/{tournament_id}", response_model=TournamentDetail)
 def get_tournament(
     session: SessionDep,
-    tournament_id: Annotated[int, Path(description="Numeric tournament ID")],
+    tournament_id: Annotated[UUID, Path(description="Tournament UUID")],
 ) -> TournamentDetail:
     """Retrieve one tournament with its final standings."""
     tournament = TournamentService.get_tournament_by_id(session, tournament_id)
