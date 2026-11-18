@@ -46,13 +46,29 @@ has been removed. See [the API contract](api-contract.md).
 
 ## Upgrade an existing application database
 
-Take a PostgreSQL backup first, and stop the old backend during the upgrade.
-Do not apply changes to a shared database until the team is ready to deploy the
-matching application code. The usual command remains:
+Stop the old backend and take a PostgreSQL backup before upgrading a database
+created with the old schema. For the local Docker setup, start the database and
+save a backup under the ignored `tmp` folder using PowerShell:
+
+```powershell
+docker compose up -d --wait db
+New-Item -ItemType Directory -Force tmp | Out-Null
+$taskBackupName = "before_uuid_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".dump"
+docker compose exec -T db pg_dump -U mtg -d mtg_tracker -Fc -f "/tmp/$taskBackupName"
+docker compose cp "db:/tmp/$taskBackupName" "tmp/$taskBackupName"
+```
+
+Confirm the dump was saved before continuing. For a managed PostgreSQL database,
+use the provider's backup procedure. Coordinate upgrades to a shared database
+with the team. Then run:
 
 ```powershell
 uv run alembic upgrade head
+uv run alembic current
 ```
+
+The revision should be `002_adopt_schema_branch (head)`. Continue with the sample
+import and startup commands in the README.
 
 Revision `002_adopt_schema_branch` creates the new tables, seeds mana and rarity,
 transfers the old records and relationships, and removes the retired plural
@@ -80,6 +96,17 @@ alternative, empty-database-only initializer for database work. It does not
 manage Alembic history; do not run both initialization paths on the same database.
 
 ## Verification
+
+For local PostgreSQL tests, create a dedicated test database once (omit `createdb`
+if it already exists). These PowerShell commands use the port from Docker:
+
+```powershell
+docker compose exec -T db createdb -U mtg mtg_tracker_test
+$taskTestDbAddress = (docker compose port db 5432).Trim()
+$env:TEST_DATABASE_URL = "postgresql+psycopg://mtg:mtg_local@$taskTestDbAddress/mtg_tracker_test"
+uv run pytest
+Remove-Item Env:TEST_DATABASE_URL
+```
 
 `uv run pytest` runs the API, importer, and constraint tests on SQLite with
 foreign keys enabled. To exercise PostgreSQL as well, point `TEST_DATABASE_URL`
